@@ -42,7 +42,11 @@ app.include_router(webhooks_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={},
+    )
 
 @app.get("/product/{path:path}", response_class=HTMLResponse)
 async def spa_product(request: Request):
