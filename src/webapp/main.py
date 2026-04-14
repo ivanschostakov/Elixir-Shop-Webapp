@@ -47,8 +47,9 @@ async def index(request: Request):
 @app.get("/product/{path:path}", response_class=HTMLResponse)
 async def spa_product(request: Request):
     return templates.TemplateResponse(
+        request=request,
         name="index.html",
-        context={"request": request},
+        context={},
     )
 
 async def run_app():
