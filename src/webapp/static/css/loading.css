@@ -1,0 +1,43 @@
+#global-loading-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(4px) !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    z-index: 2147483647 !important; /* max safe z-index */
+    opacity: 1;
+    transition: opacity 0.4s ease;
+    pointer-events: all !important;
+
+    isolation: isolate; /* ensures new top-level stacking context */
+}
+
+#global-loading-screen.hidden {
+    opacity: 0;
+    pointer-events: none !important;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #2381cc;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

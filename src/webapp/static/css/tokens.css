@@ -1,0 +1,172 @@
+:root {
+    /* colors */
+    --color-bg: #ffffff;
+    --color-surface: #f9f9f9;
+    --color-surface-2: #f5f5f5;
+    --color-overlay: rgba(255, 255, 255, 0.98);
+    --color-text: #222222;
+    --color-text-strong: #111111;
+    --color-muted: #888888;
+    --color-border: #dddddd;
+    --color-border-2: #cccccc;
+    --color-brand: #2381cc;
+    --color-brand-strong: #155a87;
+    --color-brand-stronger: #17517D;
+    --color-brand-accent: #366199;
+    --color-accent: #0f4b70;
+    --color-danger: #ff0000;
+
+    /* typography */
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-size-xs: 0.85rem;
+    --font-size-sm: 0.9rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.1rem;
+    --line-height: 1.5;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+
+    /* radii */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+
+    /* spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.6rem;
+    --space-4: 0.75rem;
+    --space-5: 1rem;
+    --space-6: 1.25rem;
+    --space-7: 1.5rem;
+    --space-8: 2rem;
+
+    /* sizes */
+    --size-app-width: 390px;
+    --size-card-max: 260px;
+    --size-card-max-sm: 180px;
+    --size-card-max-xs: 160px;
+    --size-icon: 32px;
+    --size-spinner: 60px;
+    --size-btn-height: 44px;
+    --size-cart-fab: 60px;
+    --size-map-height: 500px;
+
+    /* shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.12);
+
+    /* transitions */
+    --easing: cubic-bezier(.2,.8,.2,1);
+    --dur-fast: 150ms;
+    --dur-base: 220ms;
+    --dur-slow: 300ms;
+
+    /* z-index */
+    --z-search: 999;
+    --z-cart-fab: 9999;
+    --z-overlay: 2147483647;
+
+    /* breakpoints */
+    --bp-lg: 768px;
+    --bp-md: 600px;
+    --bp-sm: 480px;
+    --bp-xs: 400px;
+
+    /* components */
+    --header-bg: #ffffff;
+
+    --button-bg: var(--color-brand);
+    --button-bg-hover: var(--color-brand-strong);
+    --button-fg: #ffffff;
+    --button-radius: var(--radius-xl);
+
+    --input-bg: #ffffff;
+    --input-bg-weak: #fafafa;
+    --input-fg: var(--color-text);
+    --input-border: var(--color-border-2);
+    --input-border-focus: var(--color-brand-accent);
+    --input-radius: var(--radius-md);
+    --input-shadow-focus: 0 0 0 2px rgba(30, 102, 158, 0.20);
+
+    --card-bg: #ffffff;
+    --card-surface: var(--color-surface);
+    --card-radius: var(--radius-xl);
+    --card-shadow: var(--shadow-md);
+
+    --chip-bg: var(--color-surface-2);
+    --chip-fg: var(--color-text);
+    --chip-radius: var(--radius-lg);
+
+    --search-overlay-bg: var(--color-overlay);
+    --overlay-blur: 4px;
+
+    --spinner-border: 5px solid rgba(0, 0, 0, 0.1);
+    --spinner-top: var(--color-brand);
+
+    --toolbar-bg: var(--color-surface-2);
+    --toolbar-fg: var(--color-text);
+    --toolbar-radius: var(--radius-lg);
+    --toolbar-icon: var(--color-muted);
+}
+/* =========================
+   FORCE LIGHT ONLY
+   ========================= */
+
+/* Браузеру/встроенному WebView говорим: только светлая цветовая схема */
+html { color-scheme: light; }
+
+/* Если где-то включали dark через атрибут — просто игнорим */
+[data-theme="dark"]{
+    /* ничего не переопределяем — оставляем значения из :root */
+}
+
+/* Если где-то есть правила под prefers-color-scheme: dark — убиваем их */
+@media (prefers-color-scheme: dark){
+    :root{
+        /* намеренно дублируем ключевые цвета, чтобы ничего не “поплыло” */
+        --color-bg: #ffffff;
+        --color-surface: #f9f9f9;
+        --color-surface-2: #f5f5f5;
+        --color-overlay: rgba(255, 255, 255, 0.98);
+        --color-text: #222222;
+        --color-text-strong: #111111;
+        --color-muted: #888888;
+        --color-border: #dddddd;
+        --color-border-2: #cccccc;
+        --color-brand: #2381cc;
+        --color-brand-strong: #155a87;
+        --color-brand-stronger: #17517D;
+        --color-brand-accent: #366199;
+        --color-accent: #0f4b70;
+        --color-danger: #ff0000;
+
+        --header-bg: #ffffff;
+
+        --button-bg: var(--color-brand);
+        --button-bg-hover: var(--color-brand-strong);
+        --button-fg: #ffffff;
+
+        --input-bg: #ffffff;
+        --input-bg-weak: #fafafa;
+        --input-fg: var(--color-text);
+        --input-border: var(--color-border-2);
+        --input-border-focus: var(--color-brand-accent);
+
+        --card-bg: #ffffff;
+        --card-surface: var(--color-surface);
+
+        --chip-bg: var(--color-surface-2);
+        --chip-fg: var(--color-text);
+
+        --search-overlay-bg: var(--color-overlay);
+
+        --toolbar-bg: var(--color-surface-2);
+        --toolbar-fg: var(--color-text);
+        --toolbar-icon: var(--color-muted);
+    }
+}

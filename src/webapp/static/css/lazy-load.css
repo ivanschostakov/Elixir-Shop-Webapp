@@ -1,0 +1,10 @@
+/* Lazy-load placeholder blur */
+img.lazy-load {
+    filter: blur(6px);
+    transition: filter 0.3s ease;
+}
+
+img.loaded {
+    filter: blur(0);
+}
+

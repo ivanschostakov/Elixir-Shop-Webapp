@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}ElixirPeptides{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<!-- 🔍 Search overlay -->
+<div class="search-overlay" id="search-overlay">
+    <div class="search-header">
+        <input type="text" id="search-input" placeholder="Поиск продуктов..."/>
+        <button id="close-search">✕</button>
+    </div>
+    <ul id="history-list"></ul>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar" id="toolbar">
+    <button class="toolbar-btn" id="sort-btn">Сортировка</button>
+    <button class="toolbar-btn" id="filter-btn">Категории</button>
+</div>
+
+<!-- Root App container -->
+<div id="app">
+    <div id="tos-overlay" class="hidden">
+        <div class="tos-modal">
+            <div class="tos-header">
+                <h2 class="tos-title">Публичная оферта</h2>
+            </div>
+
+            <!-- СЮДА будем подгружать /static/offer.html -->
+            <div id="tos-body" class="tos-body">
+                Загрузка оферты…
+            </div>
+        </div>
+    </div>
+    <div id="product-list" class="product-grid"></div>
+    <div id="product-detail" style="display:none;"></div>
+    <div class="profile-page" id="profile-page" style="display:none;">
+        <div class="profile-header">
+            <img src="" alt="profile-avatar" class="profile-avatar" id="profile-avatar">
+            <div class="profile-name" id="profile-name">Иван Шостаков</div>
+        </div>
+
+        <div class="profile-menu">
+            <!-- История заказов -->
+            <button class="profile-item" id="orders-button" type="button">
+                <div class="profile-item-left">
+                    <div class="profile-icon">
+                    <span class="profile-icon-inner">
+                        <svg id="profile-icon-delivery-box"
+                             xmlns="http://www.w3.org/2000/svg"
+                             viewBox="0 0 48 48">
+                            <defs>
+                                <style>
+                                    .st0 { fill: url(#linear-gradient); }
+                                    .st1, .st2 { fill: #fff; }
+                                    .st2 { stroke: #fff; stroke-miterlimit: 10; }
+                                </style>
+                                <linearGradient id="linear-gradient"
+                                                x1="3.81" y1="24"
+                                                x2="44.19" y2="24"
+                                                gradientUnits="userSpaceOnUse">
+                                    <stop offset="0" stop-color="#eec6b6"/>
+                                    <stop offset=".5" stop-color="#e4b988"/>
+                                    <stop offset=".54" stop-color="#e3b785"/>
+                                    <stop offset="1" stop-color="#dea96e"/>
+                                </linearGradient>
+                            </defs>
+                            <polygon class="st0"
+                                     points="44.13 35.69 23.94 47.28 3.81 35.59 3.87 12.31 24.06 .72 44.19 12.41 44.13 35.69"/>
+                            <path class="st1"
+                                  d="M30.31,20.37c-6.71-4.06-13.41-8.11-20.12-12.17,1.98-.97,3.96-1.95,5.93-2.92,6.78,3.83,13.56,7.66,20.34,11.49-2.05,1.2-4.1,2.4-6.16,3.6Z"/>
+                            <g>
+                                <polygon class="st1"
+                                         points="30.82 20.54 35.96 17.62 35.96 29.82 30.82 32.65 30.82 20.54"/>
+                                <path class="st1"
+                                      d="M35.46,18.48v11.04l-2.56,1.4-1.59.87v-10.97l4.15-2.35M36.46,16.77c-2.05,1.16-4.1,2.32-6.15,3.49v13.24c2.05-1.13,4.1-2.25,6.15-3.38v-13.35h0Z"/>
+                            </g>
+                            <path class="st2" d="M36.85,30.23"/>
+                            <path class="st1" d="M57.19,46.91"/>
+                        </svg>
+                    </span>
+                    </div>
+                    <span class="profile-item-title">История заказов</span>
+                </div>
+            </button>
+
+            <!-- Связаться с поддержкой -->
+            <button class="profile-item" id="support-button" type="button">
+                <div class="profile-item-left">
+                    <div class="profile-icon">
+                    <span class="profile-icon-inner">
+                        <svg id="profile-icon-support"
+                             xmlns="http://www.w3.org/2000/svg"
+                             viewBox="0 0 48 48">
+                            <defs>
+                                <style>
+                                    .s0 { fill: url(#support-grad-main); }
+                                    .s1 { fill: url(#support-grad-tail); }
+                                    .s2 { fill: #ffffff; }
+                                </style>
+                                <linearGradient id="support-grad-main"
+                                                x1="2.51" y1="18.46"
+                                                x2="45.49" y2="18.46"
+                                                gradientUnits="userSpaceOnUse">
+                                    <stop offset="0" stop-color="#8fceea"/>
+                                    <stop offset=".5" stop-color="#67bee1"/>
+                                    <stop offset=".58" stop-color="#53b9dd"/>
+                                    <stop offset=".87" stop-color="#17a9d3"/>
+                                    <stop offset="1" stop-color="#00a4cf"/>
+                                </linearGradient>
+                                <linearGradient id="support-grad-tail"
+                                                x1="2.5" y1="36.98"
+                                                x2="28.64" y2="36.98"
+                                                xlink:href="#support-grad-main"/>
+                            </defs>
+                            <path class="s0"
+                                  d="M38.23,34.55c-3.47,0-6.94,0-10.42,0-6.02,0-12.03,0-18.05,0-.48,0-3.06-.05-5.14-2.13-.66-.66-1.19-1.44-1.56-2.31s-.57-1.82-.57-2.83V9.64c0-4.01,3.25-7.26,7.26-7.26h28.46c4.01,0,7.26,3.25,7.26,7.26v17.65c0,4.01-3.25,7.26-7.26,7.26Z"/>
+                            <circle class="s2" cx="13.17" cy="18.46" r="3.31"/>
+                            <circle class="s2" cx="24" cy="18.46" r="3.31"/>
+                            <circle class="s2" cx="34.83" cy="18.46" r="3.31"/>
+                            <path class="s1"
+                                  d="M28.64,34.55c.02.1-11.38-1.11-18.61,5.26-3.76,3.31-4.83,7.24-6.18,6.83-.44-.13-1.25-.83-1.34-14.85-.01-1.9,0-3.47,0-4.51,0,0,.03.26.12.67,0,0,.18.9.44,1.61.39,1.09,2.05,2.48,2.72,2.88,3.69,2.23,22.83,1.98,22.85,2.1Z"/>
+                        </svg>
+                    </span>
+                    </div>
+                    <span class="profile-item-title">Связаться с поддержкой</span>
+                </div>
+            </button>
+        </div>
+    </div>
+    <div id="cart-page" style="display:none;">
+        <div id="cart-summary">
+            <p class="total-label" id="summary-label">
+                <span class="total-label">Итого:</span>
+                <span class="total-amount">0 ₽</span>
+            </p>
+            <div class="promo">
+                <label for="promo" style="display: none">Промо-код</label>
+                <input type="text" id="promo" placeholder="Введите промо-код"/>
+            </div>
+        </div>
+        <div id="cart-items"></div>
+    </div>
+    <div id="checkout-page" style="display:none;">
+
+        <div id="delivery-header-container"></div>
+
+        <div id="delivery-widget-container">
+            <div id="cdek-map-container" class="delivery-widget"></div>
+            <div id="yandex-map-container" class="delivery-widget"></div>
+        </div>
+
+        <div id="checkout-actions"></div>
+
+    </div>
+    <div id="contact-page" style="display:none;">
+        <form id="contact-form" novalidate>
+            <input type="text" name="name" placeholder="Имя" required/>
+            <input type="text" name="surname" placeholder="Фамилия" required/>
+            <input type="tel" name="phone" placeholder="Телефон" required/>
+            <input type="email" name="email" placeholder="Email" required/>
+
+            <!-- Comment to order (moved from payment page) -->
+            <div class="contact-commentary">
+                <label class="contact-commentary-label" for="payment-commentary-input">
+                    <textarea
+                            id="payment-commentary-input"
+                            name="commentary"
+                            rows="2"
+                            placeholder="Комментарий к заказу (необязательно)"
+                    ></textarea>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payment page is no longer used; keep empty container so JS/constants do not explode -->
+    <div id="payment-page" style="display:none;"></div>
+    <div id="process-payment-page" style="display: none;">
+        <div class="process-card">
+            <!-- Lottie animation container -->
+            <h2 class="process-title">Заказ оформлен 🎉</h2>
+            <p class="process-text">Мы получили ваш заказ и скоро с вами свяжемся для подтверждения и оплаты. Пожалуйста, сохраните номер заказа</p>
+            <div id="order-lottie" class="process-lottie"></div>
+        </div>
+    </div>
+
+    <div id="orders-page" style="display:none;">
+        <div class="orders-page">
+            <!-- Активные -->
+            <section class="orders-section">
+                <header class="orders-section-header">
+                    <h3 class="orders-section-title">В обработке</h3>
+                    <span class="orders-section-counter" id="orders-active-count">0</span>
+                </header>
+
+                <div class="orders-list" id="orders-active-list"></div>
+
+                <p class="orders-empty" id="orders-active-empty" style="display: none;">
+                    Активные заказы отсутствуют.
+                </p>
+            </section>
+
+            <!-- Обработанные -->
+            <section class="orders-section">
+                <header class="orders-section-header">
+                    <h3 class="orders-section-title">Обработанные</h3>
+                    <span class="orders-section-counter" id="orders-processed-count">0</span>
+                </header>
+
+                <div class="orders-list" id="orders-processed-list"></div>
+
+                <p class="orders-empty" id="orders-processed-empty" style="display: none;">
+                    Обработанные заказы отсутствуют.
+                </p>
+            </section>
+        </div>
+    </div>
+    <div id="order-detail-page" style="display:none;">
+        <div class="order-detail">
+            <header class="order-detail-header">
+                <div class="order-detail-id-row">
+                    <h2 class="order-detail-title">
+                        Заказ №<span id="order-detail-id"></span>
+                    </h2>
+                    <span id="order-detail-status"
+                          class="order-detail-status">
+                    <!-- текст статуса JS -->
+                </span>
+                </div>
+                <p class="order-detail-date" id="order-detail-date">
+                    <!-- дата/время оформления -->
+                </p>
+            </header>
+
+            <!-- Товары -->
+            <section class="order-detail-section">
+                <h3 class="order-detail-section-title">Товары</h3>
+                <div class="order-items" id="order-items-list"></div>
+            </section>
+            <section class="order-detail-section">
+                <h3 class="order-detail-section-title">Контакты</h3>
+                <p class="order-detail-text">
+                    Телефон: <span id="order-contact-phone"></span>
+                </p>
+                <p class="order-detail-text">
+                    Email: <span id="order-contact-email"></span>
+                </p>
+            </section>
+            <!-- Доставка -->
+            <section class="order-detail-section">
+                <h3 class="order-detail-section-title">Доставка</h3>
+                <p class="order-detail-text" id="order-delivery-summary"></p>
+            </section>
+
+            <!-- Оплата -->
+            <section class="order-detail-section">
+                <h3 class="order-detail-section-title">Оплата</h3>
+                <p class="order-detail-text" id="order-payment-method"></p>
+            </section>
+
+            <!-- Комментарий -->
+            <section class="order-detail-section">
+                <h3 class="order-detail-section-title">Комментарий</h3>
+                <p class="order-detail-text" id="order-comment-text"></p>
+            </section>
+
+            <!-- Итоги -->
+            <section class="order-detail-section order-detail-summary">
+                <div class="order-summary-row">
+                    <span>Товары</span>
+                    <span id="order-subtotal"></span>
+                </div>
+                <div class="order-summary-row">
+                    <span>Доставка</span>
+                    <span id="order-delivery-price"></span>
+                </div>
+                <div class="order-summary-row order-summary-row-total">
+                    <span>Итого</span>
+                    <span id="order-total"></span>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Optional delivery service widgets -->
+<script src="https://cdn.jsdelivr.net/npm/@cdek-it/widget@3" charset="utf-8"></script>
+<script async src="https://ndd-widget.landpro.site/widget.js"></script>
+{% endblock %}

@@ -1,0 +1,79 @@
+/* =========================
+   orders-status-badges.css
+   (add to your main CSS)
+   ========================= */
+
+.order-card-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+/* Создан */
+.order-card-status--created {
+    background: #eef2ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+}
+
+/* Оплачен */
+.order-card-status--paid {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+/* Укомплектован */
+.order-card-status--packed {
+    background: #fff7ed;
+    color: #9a3412;
+    border-color: #fed7aa;
+}
+
+/* Отправлен */
+.order-card-status--sent {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+/* Доставлен */
+.order-card-status--delivered {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+/* В обработке (fallback for active carts without status) */
+.order-card-status--inprogress {
+    background: #f5f3ff;
+    color: #5b21b6;
+    border-color: #ddd6fe;
+}
+
+/* Закрыт / Обработан */
+.order-card-status--closed {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+
+/* Не найден */
+.order-card-status--notfound {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+/* Default fallback */
+.order-card-status--default {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #e5e7eb;
+}

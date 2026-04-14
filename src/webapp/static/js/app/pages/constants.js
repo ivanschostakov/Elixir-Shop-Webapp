@@ -1,0 +1,15 @@
+export const checkoutPageEl = document.getElementById("checkout-page");
+export const listEl = document.getElementById("product-list");
+export const detailEl = document.getElementById("product-detail");
+export const cartPageEl = document.getElementById("cart-page");
+export const contactPageEl = document.getElementById("contact-page");
+export const headerTitle = document.getElementById("header-left");
+export const toolbarEl = document.getElementById("toolbar");
+export const searchBtnEl = document.getElementById("search-btn");
+export const paymentPageEl = document.getElementById("payment-page");
+export const processPaymentEl = document.getElementById("process-payment-page");
+export const tosOverlayEl = document.getElementById("tos-overlay");
+export const navBottomEl = document.getElementById("nav-bottom");
+export const profilePageEl = document.getElementById("profile-page");
+export const ordersPageEl = document.getElementById("orders-page");
+export const orderDetailEl = document.getElementById("order-detail-page");

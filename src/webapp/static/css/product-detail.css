@@ -1,0 +1,317 @@
+/* Reset list css inside product info completely */
+.product-info ul,
+.product-info ol {
+    margin: 0;
+    padding-left: 24px;
+    list-style-position: outside;
+}
+
+/* Optional: spacing between list items */
+.product-info li {
+    margin-bottom: 0.5em;
+}
+
+/* Product description with clamp + "ещё..." toggle */
+.product-description {
+    position: relative;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Collapsed: only first N lines (set as 4 here) */
+.product-description.product-description--clamp {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+
+/* Expanded: show full text */
+.product-description.product-description--expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+/* "ещё..." / "скрыть" toggle */
+.product-description-toggle {
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    color: #1E669E;
+    opacity: 0.9;
+}
+
+.product-description-toggle:active {
+    opacity: 0.7;
+}
+
+/* Product image share action */
+.product-detail-container .product-image {
+    position: relative;
+}
+
+.product-detail-container .product-media-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+}
+
+.product-detail-container .product-media-action {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.product-detail-container .product-media-action svg {
+    width: 20px;
+    height: 20px;
+    stroke: #111111;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.product-detail-container .product-media-action:active {
+    transform: scale(0.96);
+}
+
+/* --- Features table with clear row borders --- */
+.features-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    margin-top: 10px;
+    font-size: 0.95rem;
+    border: 1px solid #e5e7eb;            /* outer border */
+    border-radius: 8px;
+    overflow: hidden;                      /* round corners */
+}
+
+.features-table th,
+.features-table td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: middle;                /* center content vertically */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    background-clip: padding-box;          /* clean borders on rounded table */
+}
+
+.features-table thead th {
+    background-color: #2381cc;
+    color: #ffffff;
+    font-weight: 600;
+    border-bottom: 1px solid #2071b4;      /* header separator */
+}
+
+.features-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;      /* row separator */
+    font-size: 0.8rem;
+}
+
+.features-table tbody tr:last-child {
+    border-bottom: 0;                      /* no double border at end */
+}
+
+.features-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.features-table tbody tr:hover {
+    background-color: #eef5fb;
+}
+
+/* --- Qty controls inside features table --- */
+
+/* container */
+.cart-qty-ctrl {
+    display: flex;
+    align-items: center;                   /* center buttons & value */
+    justify-content: center;
+    gap: .4rem;
+}
+
+/* buttons size & style (no CSS vars) */
+.features-table .qty-dec,
+.features-table .qty-inc {
+    width: 40px !important;
+    height: 40px !important;
+    border: none;
+    border-radius: 6px;
+    color: black !important;
+    background: transparent !important;
+    font-size: 1em;                         /* follows row font-size */
+    line-height: 1;                         /* avoid vertical jitter */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.features-table .qty-val {
+    min-width: 1.6em;
+    text-align: center;
+    font-weight: 500;
+}
+
+.cart-qty-ctrl button {
+    padding: 2px 2px 2px 2px !important;
+    background-color: transparent !important;
+    color: black !important;
+
+}
+
+/* (fixed) separate selectors for dec / inc if needed */
+.qty-dec,
+.qty-inc {
+    padding: 0 !important;
+    color: black !important;
+    background: transparent !important;
+}
+
+/* Buy button */
+.buy-btn {
+    background-color: transparent !important;
+    color: black !important;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Bottom sheet */
+.sheet-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    display: none;
+}
+
+.sheet-root.open {
+    display: block;
+}
+
+.sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .25);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    opacity: 0;
+    transition: opacity 220ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.sheet-root.open .sheet-backdrop {
+    opacity: 1;
+}
+
+.sheet-panel {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 100%);
+    width: min(100%, 390px);
+    max-height: 80vh;
+    background: #ffffff;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, .12);
+    transition: transform 220ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.sheet-root.open .sheet-panel {
+    transform: translate(-50%, 0);
+}
+
+.sheet-handle {
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #dddddd;
+    margin: 10px auto;
+}
+
+.sheet-content {
+    padding: 12px 12px 16px 12px;
+    overflow: auto;
+    max-height: calc(80vh - 28px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet-backdrop,
+    .sheet-panel {
+        transition: none;
+    }
+}
+
+/* Out-of-stock badge — higher contrast, pill shape, not full-width */
+.features-table .oos-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 9999px;                 /* pill */
+    background: #fee2e2;                   /* light red */
+    border: 1px solid #fca5a5;             /* mid red border */
+    color: #7f1d1d;                        /* dark red text */
+    font-weight: 700;
+    font-size: 0.92em;
+    line-height: 1.1;
+    white-space: nowrap;
+    pointer-events: none;
+    margin: 2px auto;                      /* center in cell */
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .03);   /* subtle depth */
+}
+
+/* Center the badge inside the balance cell */
+.features-table td.oos-bal {
+    color: #7f1d1d;                        /* match text color */
+    text-align: center;
+}
+
+/* Keep the row slightly dimmed but readable */
+.oos-row {
+    opacity: .75;
+}
+
+/* Users who prefer more contrast */
+@media (prefers-contrast: more) {
+    .features-table .oos-badge {
+        background: #ffc9c9;
+        border-color: #ff8a8a;
+        color: #5f0f0f;
+    }
+}
+
+.stock-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+    line-height:1;
+    border:1px solid transparent;
+    white-space:nowrap;
+}
+
+.stock-badge--oos{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+.stock-badge--low{ background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+.stock-badge--ok { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }

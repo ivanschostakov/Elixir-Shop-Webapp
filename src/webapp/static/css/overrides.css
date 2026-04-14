@@ -1,0 +1,307 @@
+/* Qty button overrides (square, centered, immune to global button styles) */
+.features-table .cart-qty-ctrl .qty-dec,
+.features-table .cart-qty-ctrl .qty-inc {
+    /* sizing */
+    --qty-size: 20px;            /* tweak once to resize */
+    width: var(--qty-size) !important;
+    height: var(--qty-size) !important;
+    aspect-ratio: 1 / 1;         /* keeps it square if size changes */
+
+    /* reset globals that make them “pill” shaped or tall */
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 4px !important;  /* set your exact corner radius */
+    box-shadow: none !important;
+    appearance: none;               /* iOS/Safari */
+    -webkit-appearance: none;
+
+    /* layout */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+
+    /* colors/typography */
+    background: #2AABEE;
+    color: #fff;
+    font-size: 1rem;               /* follows table text; adjust if needed */
+    cursor: pointer;
+}
+
+.features-table .cart-qty-ctrl .qty-val {
+    min-width: 1.6em;
+    text-align: center;
+    font-weight: 500;
+}
+
+.cart-icon {
+    /* Makes the icon's height match the text's line-height */
+    height: 1.2em;
+    /* Makes the width scale automatically */
+    width: 1.2em;
+}
+
+.bottom-nav .bottom-nav__avatar-img {
+    width: 28px !important;          /* подгони под высоту таббара */
+    height: 28px !important;
+    border-radius: 50% !important;   /* делаем круг */
+    object-fit: cover !important;    /* если будет png/jpg — обрежется по кругу */
+    display: block !important;
+    flex-shrink: 0;
+}
+
+/* На всякий случай перебьём глобальные правила для img */
+.bottom-nav .bottom-nav__avatar-img {
+    max-width: none;
+}
+
+.bottom-nav__svg {
+    width: 24px !important;
+    height: 24px !important;
+    display: block;
+}
+
+.bottom-nav__item[data-route="cart"] .bottom-nav__svg {
+    transform: scale(1.2);
+    transform-origin: center;
+}
+
+/* ---------------- TOS OVERLAY (desktop / default) ---------------- */
+
+#tos-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 2147483646;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    pointer-events: all;
+    padding: 0 16px;
+}
+
+#tos-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tos-modal {
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 14px 16px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.95rem;
+}
+
+.tos-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.tos-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1E669E;
+    margin: 0;
+}
+
+.tos-body {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+    color: #222;
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+
+.tos-body p {
+    margin: 0 0 8px;
+}
+
+/* ---------------- MOBILE FIX ---------------- */
+/* На телефонах делаем модалку реально full-screen,
+   чтобы Telegram/вьюпорт её не "сжимал" */
+
+@media (max-width: 600px) {
+    #tos-overlay {
+        padding: 0;                 /* без боковых отступов */
+        align-items: stretch;       /* растягиваем по высоте экрана */
+        justify-content: stretch;
+    }
+
+    .tos-modal {
+        max-width: 100%;
+        width: 100%;
+        max-height: 100vh;
+        height: 100vh;              /* занимает весь экран */
+        border-radius: 0;           /* можно как «нативный» экран */
+        padding: 12px 12px 16px 12px;
+    }
+
+    .tos-body {
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+
+* {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+input, textarea {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+/* Cart summary (top totals) */
+#summary-label.cart-summary{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+}
+
+#summary-label.cart-summary .summary-item{
+    min-width: 0;
+}
+
+#summary-label.cart-summary .summary-label{
+    font-size: 12px;
+    line-height: 1.1;
+    color: #6b7280;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+
+#summary-label.cart-summary .summary-value{
+    font-size: 22px;
+    line-height: 1.1;
+    font-weight: 800;
+    white-space: nowrap;      /* never split amount + ₽ */
+}
+
+#summary-label.cart-summary .summary-old{
+    text-decoration: line-through;
+    opacity: .65;
+}
+
+@media (max-width: 420px){
+    #summary-label.cart-summary{
+        grid-template-columns: 1fr; /* stack on tiny screens */
+    }
+}
+
+
+/* dark theme disabled: keep identical to :root */
+/* Dark theme override: same tokens, different values */
+[data-theme="dark"]{
+    /* colors */
+    --color-bg: #0f1419;
+    --color-surface: #141b23;
+    --color-surface-2: #1b2430;
+    --color-overlay: rgba(15, 20, 25, 0.96);
+
+    --color-text: #e6edf3;
+    --color-text-strong: #ffffff;
+    --color-muted: #9aa4ad;
+
+    --color-border: #22303c;
+    --color-border-2: #2a3a49;
+
+    --color-brand: #2A82C7;          /* keep your blue vibe */
+    --color-brand-strong: #1E669E;
+    --color-brand-stronger: #17517D;
+    --color-brand-accent: #5a86c3;
+
+    --color-accent: #0f4b70;
+    --color-danger: #ff6161;
+
+    /* shadows (stronger on dark) */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.35);
+    --shadow-md: 0 2px 6px rgba(0,0,0,.45);
+    --shadow-lg: 0 6px 12px rgba(0,0,0,.55);
+
+    /* components */
+    --header-bg: var(--color-surface);
+
+    --button-bg: var(--color-brand);
+    --button-bg-hover: var(--color-brand-strong);
+    --button-fg: #ffffff;
+
+    --input-bg: #0f1419;
+    --input-bg-weak: #0b1016;
+    --input-fg: var(--color-text);
+    --input-border: var(--color-border-2);
+    --input-border-focus: var(--color-brand-accent);
+    --input-shadow-focus: 0 0 0 2px rgba(90, 134, 195, 0.25);
+
+    --card-bg: var(--color-surface);
+    --card-surface: var(--color-surface-2);
+    --card-shadow: var(--shadow-md);
+
+    --chip-bg: var(--color-surface-2);
+    --chip-fg: var(--color-text);
+
+    --search-overlay-bg: var(--color-overlay);
+
+    --spinner-border: 5px solid rgba(255,255,255,0.10);
+    --spinner-top: var(--color-brand);
+
+    --toolbar-bg: var(--color-surface-2);
+    --toolbar-fg: var(--color-text);
+    --toolbar-icon: var(--color-muted);
+}
+
+.order-card-status--invoiced  { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; } /* invoice sent */
+.order-card-status--waiting   { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; } /* waiting */
+.order-card-status--canceled  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; } /* canceled */
+.order-card-status--refund    { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; } /* refund/decline */
+.order-card-status--done      { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; } /* done */
+
+/* If you don't have base styles yet: */
+.order-card-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* optional (if you want perfect alignment like a receipt) */
+.order-item-row__top,
+.order-item-row__bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.order-item-row__name { font-weight: 600; }
+.order-item-row__sum,
+.order-item-row__sum2 { white-space: nowrap; }
+
+.order-item-row__meta { opacity: 0.8; }

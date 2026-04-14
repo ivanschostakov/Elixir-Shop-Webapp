@@ -1,0 +1,162 @@
+/* ---------------- CONTACT PAGE ---------------- */
+
+#contact-page {
+    display: none; /* toggled via JS */
+    max-width: 900px;
+    margin: 0.5rem auto;
+    padding: 0.5rem;
+    background: #fff;
+    border-radius: 12px;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+#contact-page h2 {
+    text-align: center;
+    color: #1E669E;
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+    user-select: none;
+}
+
+/* ---------------- FORM ---------------- */
+#contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* text inputs */
+#contact-form input {
+    padding: 12px 4px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fafafa;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+    user-select: text !important;
+    cursor: text;
+}
+
+#contact-form input:focus {
+    outline: none;
+    border-color: #1E669E;
+    background-color: #fff;
+}
+
+/* textarea (commentary) */
+#contact-form textarea {
+    padding: 12px 16px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fafafa;
+    resize: vertical;
+    min-height: 96px;
+    max-height: 180px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+    user-select: text !important;
+    cursor: text;
+    -webkit-appearance: none;
+}
+
+#contact-form textarea:focus {
+    outline: none;
+    border-color: #1E669E;
+    background-color: #fff;
+}
+
+/* ---------------- FIELD ERRORS ---------------- */
+
+.field-error {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    color: #ef4444;
+}
+
+.input-error {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+}
+
+/* ---------------- COMMENTARY BLOCK ---------------- */
+
+.contact-commentary {
+    margin-top: 4px;
+}
+
+.contact-commentary-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.contact-commentary-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+/* ---------------- SUBMIT BUTTON (not used now, but kept if needed) ---------------- */
+#submit-contact {
+    display: inline-block;
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #fff;
+    background-color: #1E669E;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.1s ease;
+    user-select: none;
+}
+
+#submit-contact:hover {
+    background-color: #17517D;
+}
+
+#submit-contact:active {
+    transform: scale(0.98);
+}
+
+#submit-contact:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width: 600px) {
+    #contact-page {
+        margin: 0.5rem;
+        padding: 0.5rem;
+    }
+
+    #contact-page h2 {
+        font-size: 1.2rem;
+    }
+
+    #contact-form input,
+    #contact-form textarea {
+        font-size: 0.95rem;
+        padding: 10px 14px;
+    }
+
+    #submit-contact {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+    }
+}
+
+/* ---------------- ANIMATIONS ---------------- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

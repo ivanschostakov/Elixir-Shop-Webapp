@@ -1,0 +1,163 @@
+/* =========================
+   Payment Choice Page
+   ========================= */
+
+#payment-page {
+    margin-top: 8px;
+    padding: 16px;
+    max-width: 390px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.payment-methods {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    margin: 10px 0 4px;
+}
+
+.payment-method {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.payment-method input {
+    margin: 0;
+    transform: scale(1.08);
+}
+
+.payment-method span {
+    font-size: 1.02rem;
+    line-height: 1.4;
+    font-weight: 600;
+    color: #111827;
+}
+
+.payment-method--active {
+    border-color: #1e669e;
+    background: #f0f7ff;
+}
+
+/* =========================
+   Process Payment Page
+   ========================= */
+
+#process-payment-page {
+    margin-top: 8px;
+    padding: 16px;
+    max-width: 390px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 12px;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+/* Общий стиль для внутренних блоков (USDT / YooKassa / Later) */
+#process-payment-page > div {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    color: #374151;
+}
+
+/* ---------- USDT блок ---------- */
+
+#qr-code {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Адрес кошелька */
+#usdt-address {
+    display: block;
+    width: 100%;
+    font-family:
+            ui-monospace,
+            SFMono-Regular,
+            Menlo,
+            Monaco,
+            Consolas,
+            "Liberation Mono",
+            "Courier New",
+            monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-all;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px dashed #e5e7eb;
+}
+
+/* Поле ввода TXID */
+#txid {
+    width: 100%;
+    margin-top: 4px;
+}
+
+#txid input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    outline: none;
+    background: #ffffff;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+}
+
+#txid input[type="text"]:focus {
+    border-color: var(--color-brand, #2381cc);
+    box-shadow: 0 0 0 1px rgba(35, 129, 204, 0.18);
+}
+
+/* ---------- YooKassa блок ---------- */
+
+#yookassa {
+    min-height: 80px;
+    justify-content: center;
+}
+
+.redirect-svg {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+    animation: payment-redirect-spin 1s linear infinite;
+}
+
+/* Простая анимация "крутилки" для svg */
+@keyframes payment-redirect-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* ---------- Later блок ---------- */
+
+#later {
+    min-height: 64px;
+    justify-content: center;
+    font-size: 15px;
+    color: #4b5563;
+    padding: 4px 0;
+}

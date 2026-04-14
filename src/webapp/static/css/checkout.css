@@ -1,0 +1,90 @@
+#cdek-map-container {
+    width: 100%;
+    height: 500px;        /* non-zero height at mount */
+    margin: 12px 0;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    overflow: hidden;
+}
+
+
+/* ---------------- DELIVERY METHOD TOGGLE ---------------- */
+.delivery-toggle-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 12px;
+    margin-top: 1rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    gap: 8px;
+}
+
+.delivery-option {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+    background: #fff;
+}
+
+.delivery-option:hover {
+    background: #eef6fc;
+}
+
+.delivery-option.active {
+    background: #1E669E;
+    color: #fff;
+    border-color: #1E669E;
+    box-shadow: 0 2px 6px rgba(30, 102, 158, 0.2);
+}
+
+/* Optional toggle animation (subtle slide effect) */
+.delivery-toggle-container .delivery-option.active {
+    transform: scale(1.02);
+}
+
+/* Make sure map container has proper spacing below the toggle */
+#delivery-map-container {
+    width: 100%;
+    height: 500px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+#delivery-map-container.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+/* Yandex Delivery Widget */
+.ydw{ display:grid; grid-template-columns:1fr 320px; gap:0; width:100%; height:500px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#fff; }
+.ydw-map{ width:100%; height:100%; }
+.ydw-list{ height:100%; overflow-y:auto; border-left:1px solid #e5e7eb; background:#fff; }
+.ydw-empty{ padding:16px; color:#6b7280; font-style:italic; text-align:center; }
+
+.ydw-row{ padding:14px 16px; border-bottom:1px solid #e5e7eb; cursor:pointer; }
+.ydw-row:hover{ background:#f9fafb; }
+.ydw-row.is-selected{ background:#e0eef9; border-left:4px solid #1E669E; padding-left:12px; }
+.ydw-name{ font-weight:600; font-size:14px; color:#111827; }
+.ydw-addr{ font-size:13px; color:#6b7280; margin-top:4px; }
+.ydw-meta{ font-size:12px; color:#374151; margin-top:8px; }
+
+.ydw-actions{ display:flex; gap:8px; margin-top:8px; }
+.ydw-primary, .ydw-secondary{
+    flex:1; padding:10px 12px; border-radius:10px; border:1px solid transparent; font-weight:700; cursor:pointer;
+}
+.ydw-primary{ background:#1E669E; color:#fff; }
+.ydw-primary:disabled{ opacity:.6; cursor:not-allowed; }
+.ydw-secondary{ background:#f3f4f6; color:#111827; border-color:#e5e7eb; }
+@media (max-width: 720px){
+    .ydw{ grid-template-columns:1fr; grid-template-rows:1fr 240px; height:520px; }
+    .ydw-list{ border-left:none; border-top:1px solid #e5e7eb; }
+}

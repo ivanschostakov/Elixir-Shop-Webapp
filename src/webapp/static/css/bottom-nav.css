@@ -1,0 +1,130 @@
+/* Контейнер нижнего меню */
+.bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 64px;
+    padding: 8px 0;
+
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 4px;
+
+    background: #ffffff;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+}
+
+/* Кнопка таббара */
+.bottom-nav__item {
+    flex: 1 1 0;
+    min-width: 0;
+
+    border: none;
+    background: none;
+    padding: 4px 0;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    font: inherit;
+    color: #9ca3af;            /* серый: текст + иконка */
+    cursor: pointer;
+}
+
+/* Активный таб */
+.bottom-nav__item--active {
+    color: #3b82f6;            /* синий: текст + иконка */
+}
+
+/* Подпись под иконкой */
+.bottom-nav__label {
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+/* Обёртка иконки */
+.bottom-nav__icon {
+    width: 24px;
+    height: 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Сам SVG */
+.bottom-nav__svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Дом и сердце */
+.bottom-nav__icon-shape {
+    fill: currentColor;        /* цвет = color кнопки */
+}
+
+/* Сумка */
+.bottom-nav__icon-bag {
+    fill: currentColor;        /* серый/синий как текст */
+}
+
+/* Улыбка на сумке — белая, чтобы была видна */
+.bottom-nav__icon-bag-smile {
+    stroke: #ffffff;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.bottom-nav__icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* общий размер иконок, чтобы корзина была того же роста */
+.bottom-nav__svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+/* бейдж */
+.bottom-nav__badge {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+
+    border-radius: 999px;
+    background: #ff4d4f;
+    color: #fff;
+
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    font-weight: 600;
+
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.bottom-nav__badge--hidden {
+    display: none;
+}
+
+/* Ручка сумки (перевёрнутая улыбка над сумкой) */
+.bottom-nav__icon-bag-handle {
+    fill: none;               /* только контур */
+    stroke: currentColor;     /* тот же цвет, что и иконка/текст */
+    stroke-width: 1.5;        /* чуть тоньше, чем белая улыбка */
+    stroke-linecap: round;    /* скруглённые края */
+}

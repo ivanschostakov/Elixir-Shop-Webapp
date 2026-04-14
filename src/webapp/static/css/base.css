@@ -1,0 +1,72 @@
+/* ---------------- RESET ---------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height);
+    color: var(--color-text);
+    background: var(--color-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------- HEADER ---------------- */
+header {
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-bg);
+}
+
+.header-left {
+    font-weight: 500;
+    font-size: 18px;
+}
+
+/* ---------------- MAIN ---------------- */
+main {
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 0.5rem 1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Disable text selection globally */
+* {
+    user-select: none; /* standard */
+    -webkit-user-select: none; /* Chrome, Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE/Edge */
+}
+
+/* Optional: keep the cursor default so it doesn’t show text cursor */
+* {
+    cursor: default;
+}
+
+input, textarea {
+    user-select: text !important;
+    cursor: text;
+}
+
+/* Make all divs unselectable */
+div {
+    user-select: none;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE/Edge */
+}
+
+html, body { overflow-x: hidden; }
+#main-content, header, footer{ width: 100%; max-width: 390px; margin: 0 auto; }

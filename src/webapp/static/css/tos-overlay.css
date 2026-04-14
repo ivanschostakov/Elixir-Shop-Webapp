@@ -1,0 +1,152 @@
+/* ---------------- TOS OVERLAY (full-screen) ---------------- */
+
+#tos-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(0, 0, 0, 0.45);        /* тёмный полупрозрачный фон */
+    backdrop-filter: blur(4px);             /* лёгкий blur, как у лоадера */
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 2147483646;                    /* чуть ниже глобального лоадера */
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    pointer-events: all;
+    padding: 0 16px;                        /* чтобы на мобилках не прилипало к краю */
+}
+
+/* скрытое состояние — по аналогии с #global-loading-screen.hidden */
+#tos-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* сама карточка с текстом (СДЕЛАЛИ ПОБОЛЬШЕ) */
+.tos-modal {
+    width: 100%;
+    max-width: 420px;           /* было 360px — теперь чуть шире */
+    max-height: 90vh;           /* чтобы почти на весь экран, но с зазором */
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px 14px 16px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.95rem;
+}
+
+/* шапка с заголовком и крестиком */
+.tos-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+/* заголовок */
+.tos-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1E669E;
+    margin: 0;
+}
+
+/* кнопка-крестик */
+.tos-close-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 6px;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* СКРОЛЛИМЫЙ ТЕКСТ ОФЕРТЫ */
+.tos-body {
+    flex: 1;
+    overflow-y: auto;          /* вот тут скролл внутри модалки */
+    padding-right: 4px;        /* чтобы скроллбар не ел текст */
+    color: #222;
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+
+/* немного улучшим абзацы оферты */
+.tos-body p {
+    margin: 0 0 8px;
+}
+
+/* старая верстка — оставляем на всякий случай, если где-то ещё используешь */
+
+/* текст */
+.tos-text {
+    color: #222;
+    line-height: 1.4;
+}
+
+/* ссылка на оферту */
+.tos-link {
+    display: inline-block;
+    margin: 4px 0 6px 0;
+    color: #1E669E;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* строка с чекбоксом */
+.tos-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #222;
+    margin-top: 6px;
+}
+
+.tos-checkbox-row input[type="checkbox"] {
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.tos-checkbox-row span {
+    flex: 1;
+}
+
+/* кнопка "Продолжить" — если вдруг пригодится отдельно от Telegram MainButton */
+#tos-accept-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: none;
+    background: #1E669E;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+}
+
+#tos-accept-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#tos-accept-btn:not(:disabled):hover {
+    background: #17517D;
+}
+
+#tos-accept-btn:not(:disabled):active {
+    transform: scale(0.98);
+}

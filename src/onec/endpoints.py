@@ -1,0 +1,6 @@
+PRICES = "InformationRegister_ЦеныНоменклатуры?$filter=ВидЦен_Key eq guid'23800556-4ed9-11f0-887d-fa163eccf8af'"
+UNITS = "Catalog_КлассификаторЕдиницИзмерения"
+CATEGORIES = "Catalog_КатегорииНоменклатуры"
+FEATURES = "Catalog_ХарактеристикиНоменклатуры"
+PRODUCTS = "Catalog_Номенклатура"
+BALANCES = "InformationRegister_ОстаткиТоваров"
