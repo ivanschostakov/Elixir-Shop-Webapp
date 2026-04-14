@@ -16,9 +16,7 @@ from playwright.async_api import async_playwright
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from config import AMOCRM_CLIENT_ID, AMOCRM_CLIENT_SECRET, AMOCRM_ACCESS_TOKEN, AMOCRM_LOGIN_EMAIL, \
-    AMOCRM_LOGIN_PASSWORD, AMOCRM_REFRESH_TOKEN, AMOCRM_REDIRECT_URI, AMOCRM_BASE_DOMAIN, WORKING_DIR, SMTP_USER, \
-    SMTP_PASSWORD, UFA_TZ
+from config import AMOCRM_CLIENT_ID, AMOCRM_CLIENT_SECRET, AMOCRM_ACCESS_TOKEN, AMOCRM_LOGIN_EMAIL, AMOCRM_LOGIN_PASSWORD, AMOCRM_REFRESH_TOKEN, AMOCRM_REDIRECT_URI, AMOCRM_BASE_DOMAIN, WORKING_DIR, SMTP_USER, SMTP_PASSWORD, UFA_TZ
 from src.database import get_session
 from src.database.crud import get_carts_by_date
 from src.database.models import Feature

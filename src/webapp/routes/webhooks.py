@@ -6,15 +6,16 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import PlainTextResponse
+from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from src.database.crud import get_cart_by_id, update_cart, get_promo_by_code, update_promo
+from src.database.crud import delete_used_code, get_cart_by_id, get_promo_by_code, get_used_code_by_code, get_user, update_cart, update_promo, update_user
 from src.database import get_db
 from src.database.models import Cart
 from src.webapp.routes.promocodes import Q2, D100
-from src.database.schemas import CartUpdate, PromoCodeUpdate
+from src.database.schemas import CartUpdate, PromoCodeUpdate, UserUpdate
 from src.services.intellectmoney import intellectmoney
 from src.services.order_fulfillment import create_delivery_from_snapshot
 from src.internal_api.services.orders import verify_order_code_service
@@ -22,6 +23,7 @@ from src.webapp.schemas import VerifyOrderIn, VerifyOrderOut
 from src.webapp.routes.payments import reconcile_sbp_payment
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+PREMIUM_PRICE_PER_MONTH = Decimal("5000")
 
 
 async def _get_cart_by_lead_id(db: AsyncSession, lead_id: int) -> Cart | None:
@@ -46,6 +48,35 @@ async def _create_delivery_if_needed(db: AsyncSession, cart: Cart) -> Cart:
     if (cart.selected_delivery_service or "").strip().lower() == "yandex" and provider_ref:
         patch["yandex_request_id"] = provider_ref
     return await update_cart(db, cart.id, CartUpdate(**patch))
+
+
+def _subtract_premium_duration(premium_until: datetime, price: Decimal) -> datetime:
+    if price <= 0:
+        return premium_until
+
+    whole_months = int(price // PREMIUM_PRICE_PER_MONTH) if PREMIUM_PRICE_PER_MONTH else 0
+    if whole_months <= 0:
+        return premium_until
+    return premium_until - relativedelta(months=whole_months)
+
+
+async def _reverse_used_code_premium_if_needed(db: AsyncSession, cart: Cart, order_code: str) -> None:
+    if not order_code:
+        return
+
+    used_code = await get_used_code_by_code(db, order_code)
+    if not used_code:
+        return
+
+    user = await get_user(db, "tg_id", cart.user_id)
+    if not user:
+        return
+
+    if user.premium_until:
+        new_premium_until = _subtract_premium_duration(user.premium_until, Decimal(str(used_code.price or 0)))
+        await update_user(db, user.tg_id, UserUpdate(premium_until=new_premium_until))
+
+    await delete_used_code(db, used_code.id)
 
 @router.get("/amocrm")
 async def get_webhook(request: Request):
@@ -87,6 +118,7 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                     return JSONResponse({"ok": True, "ignored": "cart not found"})
                 cart_id = cart.id
 
+        order_code = str(cart.id)
         status_text = amocrm.STATUS_WORDS.get(status_id, f"Статус {status_id}")
         print(cart_id, '->', status_text)
         is_active = True if status_id not in [143, 142, 82657618] else False
@@ -94,6 +126,8 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         is_canceled = True if status_id in [82657618, 143] else None
         is_shipped = True if status_id in [76566302, 76566306] else None
         cart = await update_cart(db, cart_id, CartUpdate(status=status_text, is_active=is_active, is_paid=is_paid, is_canceled=is_canceled, is_shipped=is_shipped))
+        if status_id == 143:
+            await _reverse_used_code_premium_if_needed(db, cart, order_code)
         if status_id in amocrm.PAID_STATUS_IDS:
             cart = await _create_delivery_if_needed(db, cart)
         if not cart.is_active and not cart.promo_gains_given:
