@@ -24,6 +24,7 @@ import {
 
 const cartTotalEl = document.getElementById("summary-label");
 const cartItemsEl = document.getElementById("cart-items");
+const NON_DISCOUNTABLE_TG_CATEGORY_ID = 17;
 
 let cartRows = {};
 
@@ -79,6 +80,22 @@ function getCartTotalRaw() {
     return round2(total);
 }
 
+function getCartDiscountExemptTotal() {
+    let total = 0;
+    for (const key in cartRows) {
+        const row = cartRows[key];
+        if (!row.isDiscountExempt) continue;
+        const qty = state.cart[key] || 0;
+        const unit = parseFloat(row.priceDiv.dataset.unitPrice);
+        total += unit * qty;
+    }
+    return round2(total);
+}
+
+function getCartDiscountableTotal() {
+    return round2(getCartTotalRaw() - getCartDiscountExemptTotal());
+}
+
 function getAppliedDiscountPct() {
     const promoInput = getPromoInput();
     const typed = (promoInput?.value || "").trim();
@@ -97,7 +114,9 @@ function getCartTotalFinal() {
     const raw = getCartTotalRaw();
     const pct = getAppliedDiscountPct();
     if (!pct) return raw;
-    return round2(raw * (100 - pct) / 100);
+    const exemptTotal = getCartDiscountExemptTotal();
+    const discountableTotal = getCartDiscountableTotal();
+    return round2(exemptTotal + (discountableTotal * (100 - pct) / 100));
 }
 
 async function applyPromocode() {
@@ -156,20 +175,29 @@ function updateTotal() {
     }
 
     const rawTotal = getCartTotalRaw();
+    const discountExemptTotal = getCartDiscountExemptTotal();
+    const discountableTotal = getCartDiscountableTotal();
     const discountPct = getAppliedDiscountPct();
     const finalTotal = getCartTotalFinal();
 
     cartTotalEl.classList.add("cart-summary");
 
-    if (discountPct > 0) {
+    if (discountPct > 0 && discountableTotal > 0) {
         cartTotalEl.innerHTML = `
             <div class="summary-item">
                 <div class="summary-label">Итого</div>
                 <div class="summary-value summary-old">${formatRUB(rawTotal)}</div>
             </div>
 
+            ${discountExemptTotal > 0 ? `
             <div class="summary-item">
-                <div class="summary-label">Скидка</div>
+                <div class="summary-label">Без скидки</div>
+                <div class="summary-value">${formatRUB(discountExemptTotal)}</div>
+            </div>
+            ` : ""}
+
+            <div class="summary-item">
+                <div class="summary-label">${discountExemptTotal > 0 ? "Скидка на остальное" : "Скидка"}</div>
                 <div class="summary-value">${discountPct}%</div>
             </div>
 
@@ -288,6 +316,7 @@ async function renderCart() {
 
         const name = p.feature ? `${p.product.name} (${p.feature.name})` : p.product.name;
         const unitPrice = p.feature ? p.feature.price : p.product.price;
+        const tgCategoryIds = Array.isArray(p.product?.tg_category_ids) ? p.product.tg_category_ids : [];
 
         const row = document.createElement("div");
         row.className = "cart-item";
@@ -314,7 +343,13 @@ async function renderCart() {
         plus.onclick = () => updateQuantity(key, 1);
 
         cartItemsEl.appendChild(row);
-        cartRows[key] = {row, qtySpan, priceDiv, name};
+        cartRows[key] = {
+            row,
+            qtySpan,
+            priceDiv,
+            name,
+            isDiscountExempt: tgCategoryIds.includes(NON_DISCOUNTABLE_TG_CATEGORY_ID),
+        };
     });
 
     updateTotal();

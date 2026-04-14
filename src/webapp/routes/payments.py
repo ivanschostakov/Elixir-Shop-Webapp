@@ -278,7 +278,12 @@ def _amocrm_payment_label(payment_method: str | None) -> str:
     return payment_method or "Не указан"
 
 
-async def _apply_promocode(db: AsyncSession, total: Decimal, promocode_raw: str | None) -> tuple[Decimal, str | None]:
+async def _apply_promocode(
+    db: AsyncSession,
+    total: Decimal,
+    discountable_total: Decimal,
+    promocode_raw: str | None,
+) -> tuple[Decimal, str | None]:
     promocode = (promocode_raw or "").strip()
     if not promocode:
         return total, None
@@ -291,7 +296,11 @@ async def _apply_promocode(db: AsyncSession, total: Decimal, promocode_raw: str 
         raise HTTPException(status_code=400, detail="Price must be greater than 0")
 
     discount_pct = Decimal(str(promo_code.discount_pct or 0))
-    discounted_total = (total * (Decimal("1") - (discount_pct / Decimal("100")))).quantize(Q2, rounding=ROUND_HALF_UP)
+    if discount_pct <= 0 or discountable_total <= 0:
+        return total, promo_code.code
+
+    discounted_discountable_total = (discountable_total * (Decimal("1") - (discount_pct / Decimal("100")))).quantize(Q2, rounding=ROUND_HALF_UP)
+    discounted_total = (total - discountable_total + discounted_discountable_total).quantize(Q2, rounding=ROUND_HALF_UP)
     promo_code_update = PromoCodeUpdate(times_used=(promo_code.times_used or 0) + 1)
     await update_promo(db, promo_code.id, promo_code_update)
     return discounted_total, promo_code.code
@@ -590,8 +599,9 @@ async def _prepare_order(payload: CheckoutData, db: AsyncSession) -> dict[str, o
             )
         _raise_duplicate_order(existing_cart.id)
 
-    total = _to_decimal(enriched_cart.get("total"))
-    total, promo_code = await _apply_promocode(db, total, payload.promocode)
+    total = _to_decimal(enriched_cart.get("raw_total"))
+    discountable_total = _to_decimal(enriched_cart.get("discountable_total"))
+    total, promo_code = await _apply_promocode(db, total, discountable_total, payload.promocode)
 
     snapshot = _build_checkout_snapshot(
         payload,
