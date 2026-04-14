@@ -46,7 +46,10 @@ async def index(request: Request):
 
 @app.get("/product/{path:path}", response_class=HTMLResponse)
 async def spa_product(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        name="index.html",
+        context={"request": request},
+    )
 
 async def run_app():
     logger.info("Starting uvicorn server (reload=%s)", False)
