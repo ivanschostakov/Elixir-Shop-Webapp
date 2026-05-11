@@ -25,6 +25,9 @@ from src.tg_methods import normalize_phone
 
 PriceT = Union[int, None, Literal["old", "low", "not_found"]]
 
+class AmoCRMRecoverableError(RuntimeError):
+    """Temporary AmoCRM auth/connectivity issue safe to retry later."""
+
 class AsyncAmoCRM:
     def __init__(self,base_domain: str, client_id: str, client_secret: str, redirect_uri: str, access_token: str | None = None, refresh_token: str | None = None):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -35,6 +38,7 @@ class AsyncAmoCRM:
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.expires_at = datetime.now(UTC) + timedelta(days=1)
+        self._refresh_lock = asyncio.Lock()
 
         self.PIPELINE_ID = 9280278
         self.STATUS_IDS = {"main": 81419122, "check_paid": 75784946, "packaged": 75784942, "package_sent": 76566302, "package_delivered": 76566306, "won": 142}
@@ -130,13 +134,26 @@ class AsyncAmoCRM:
         return await self.__request_token("authorization_code", code)
 
     async def _refresh(self):
-        try: return await self.__request_token("refresh_token")
+        try:
+            return await self.__request_token("refresh_token")
         except Exception as e:
-            self.logger.error(f"❌ Refresh failed: {e}, retrying with new AUTH_CODE...")
-            return await self._authorize()
+            allow_interactive = os.getenv("AMOCRM_ALLOW_INTERACTIVE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
+            self.logger.error(f"❌ Refresh failed: {e}")
+            if not allow_interactive:
+                raise AmoCRMRecoverableError("Refresh token exchange failed and interactive re-auth is disabled") from e
+            self.logger.warning("retrying with new AUTH_CODE...")
+            try:
+                return await self._authorize()
+            except Exception as auth_exc:
+                raise AmoCRMRecoverableError("Interactive re-auth failed") from auth_exc
 
     async def _ensure_token_valid(self):
-        if not self.access_token or datetime.now(UTC) >= self.expires_at: await self._refresh()
+        if self.access_token and datetime.now(UTC) < self.expires_at:
+            return
+        async with self._refresh_lock:
+            if self.access_token and datetime.now(UTC) < self.expires_at:
+                return
+            await self._refresh()
 
     async def _request(self, method: str, endpoint: str, **kwargs):
         await self._ensure_token_valid()
@@ -148,9 +165,15 @@ class AsyncAmoCRM:
             res = await client.request(method, url, headers=headers, **kwargs)
             if res.status_code in [401, 403]:
                 self.logger.warning("Access token invalid, refreshing...")
-                await self._refresh()
+                async with self._refresh_lock:
+                    # Another coroutine may refresh first; skip duplicate refresh if token already valid.
+                    if not self.access_token or datetime.now(UTC) >= self.expires_at:
+                        await self._refresh()
                 headers["Authorization"] = f"Bearer {self.access_token}"
                 res = await client.request(method, url, headers=headers, **kwargs)
+
+            if res.status_code == 429:
+                raise AmoCRMRecoverableError(f"AmoCRM rate limit on {method} {endpoint}")
 
             res.raise_for_status()
             if res.text.strip(): return res.json()

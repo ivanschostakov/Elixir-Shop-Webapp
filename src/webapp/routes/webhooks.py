@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import parse_qs
 
+import httpx
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import PlainTextResponse
 from dateutil.relativedelta import relativedelta
@@ -24,6 +25,7 @@ from src.webapp.routes.payments import reconcile_sbp_payment
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 PREMIUM_PRICE_PER_MONTH = Decimal("5000")
+TRANSIENT_AMOCRM_STATUSES = {401, 403, 429, 500, 502, 503, 504}
 
 
 async def _get_cart_by_lead_id(db: AsyncSession, lead_id: int) -> Cart | None:
@@ -92,11 +94,30 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     status_id = int((q.get("leads[status][0][status_id]") or ["0"])[0] or "0")
     pipeline_id = int((q.get("leads[status][0][pipeline_id]") or ["0"])[0] or "0")
     if not lead_id: return JSONResponse({"ok": True, "ignored": "no lead_id"})
-    from src.amocrm.client import amocrm
+    from src.amocrm.client import amocrm, AmoCRMRecoverableError
     if pipeline_id and pipeline_id != amocrm.PIPELINE_ID: return JSONResponse({"ok": True, "ignored": "wrong pipeline"})
 
     try:
-        lead = await amocrm._get(f"/api/v4/leads/{lead_id}")
+        try:
+            lead = await amocrm._get(f"/api/v4/leads/{lead_id}")
+        except AmoCRMRecoverableError as exc:
+            amocrm.logger.warning(
+                "Temporary AmoCRM issue during webhook lead fetch lead_id=%s: %s. Returning 200 to avoid retry storm.",
+                lead_id,
+                exc,
+            )
+            return JSONResponse({"ok": True, "ignored": "amocrm_temporal_failure"})
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code if exc.response is not None else None
+            if status_code in TRANSIENT_AMOCRM_STATUSES:
+                amocrm.logger.warning(
+                    "Transient AmoCRM HTTP %s during webhook lead fetch lead_id=%s. Returning 200 to avoid retry storm.",
+                    status_code,
+                    lead_id,
+                )
+                return JSONResponse({"ok": True, "ignored": f"amocrm_http_{status_code}"})
+            raise
+
         name = lead.get("name") or ""
         status_id = int(lead.get("status_id") or status_id or 0)
         pipeline_id = int(lead.get("pipeline_id") or pipeline_id or 0)
