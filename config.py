@@ -104,6 +104,11 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 ENTERPRISE_URL      = env("ENTERPRISE_URL", "")
 ENTERPRISE_LOGIN    = env("ENTERPRISE_LOGIN", "")
 ENTERPRISE_PASSWORD = env("ENTERPRISE_PASSWORD", "")
+MOY_SKLAD_BASE_URL = env("MOY_SKLAD_BASE_URL", "https://api.moysklad.ru/api/remap/1.2") or "https://api.moysklad.ru/api/remap/1.2"
+MOY_SKLAD_TOKEN = env("MOY_SKLAD_TOKEN", "")
+MOY_SKLAD_TIMEOUT_SECONDS = env_int("MOY_SKLAD_TIMEOUT_SECONDS", 30) or 30
+MOY_SKLAD_STOCK_RESERVE = env_int("MOY_SKLAD_STOCK_RESERVE", 3) or 3
+MOY_SKLAD_SYNC_INTERVAL_SECONDS = env_int("MOY_SKLAD_SYNC_INTERVAL_SECONDS", 900) or 900
 
 CDEK_ACCOUNT         = env("CDEK_ACCOUNT", "")
 CDEK_API_URL         = env("CDEK_API_URL", "")

@@ -5,7 +5,7 @@ import time
 
 from src.webapp.main import run_app
 from src.logger import setup_logging
-from src.onec.main import OneCEnterprise
+from src.moysklad.main import MoySkladEnterprise
 from src.admin_panel.bot.main import run_admin_bot
 from src.services.yandex import promo_codes_worker
 from src.services.cdek import client as cdek_client
@@ -54,9 +54,11 @@ async def _heartbeat(stop_event: asyncio.Event, task_map: dict[str, asyncio.Task
 
 async def main():
     stop_event = asyncio.Event()
-    onec = OneCEnterprise()
+    moysklad = MoySkladEnterprise()
     task_map: dict[str, asyncio.Task] = {
-        "onec.postgres_worker": asyncio.create_task(_run_forever("onec.postgres_worker", onec.postgres_worker)),
+        "moysklad.postgres_worker": asyncio.create_task(
+            _run_forever("moysklad.postgres_worker", moysklad.postgres_worker)
+        ),
         "admin_bot": asyncio.create_task(_run_forever("admin_bot", run_admin_bot)),
         "webapp": asyncio.create_task(_run_forever("webapp", run_app)),
         "promo_codes_worker": asyncio.create_task(_run_forever("promo_codes_worker", promo_codes_worker)),
@@ -72,8 +74,8 @@ async def main():
         for task in tasks:
             if not task.done(): task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-        try: await onec.close()
-        except Exception: logger.exception("Failed to close OneC client cleanly")
+        try: await moysklad.close()
+        except Exception: logger.exception("Failed to close MoySklad client cleanly")
         logger.info("All background tasks stopped cleanly.")
 
     loop = asyncio.get_running_loop()

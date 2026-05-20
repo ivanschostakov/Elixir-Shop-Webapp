@@ -190,10 +190,6 @@ function renderPaymentMarkup() {
             </div>
 
             <div id="payment-methods" class="payment-methods">
-                <label class="payment-method">
-                    <input type="radio" name="payment_method" value="sbp" />
-                    <span>Оплатить сейчас по СБП</span>
-                </label>
                 <label class="payment-method payment-method--active">
                     <input type="radio" name="payment_method" value="later" checked />
                     <span>Оплатить позже</span>
