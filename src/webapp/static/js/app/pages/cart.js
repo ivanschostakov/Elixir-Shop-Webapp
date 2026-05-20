@@ -307,10 +307,15 @@ async function renderCart() {
         }),
     );
 
+    const staleKeys = [];
     products.forEach((p, i) => {
-        if (!p) return;
-
         const key = keys[i];
+        const [, featureId] = key.split("_");
+        if (!p?.product || (featureId && !p?.feature)) {
+            staleKeys.push(key);
+            return;
+        }
+
         const qty = state.cart[key] || 0;
         if (qty <= 0) return;
 
@@ -351,6 +356,19 @@ async function renderCart() {
             isDiscountExempt: tgCategoryIds.includes(NON_DISCOUNTABLE_TG_CATEGORY_ID),
         };
     });
+
+    if (staleKeys.length) {
+        staleKeys.forEach((key) => {
+            delete state.cart[key];
+            delete cartRows[key];
+        });
+        saveCart();
+
+        if (!Object.keys(state.cart).length) {
+            await renderCart();
+            return;
+        }
+    }
 
     updateTotal();
 }
