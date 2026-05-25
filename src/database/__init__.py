@@ -51,6 +51,9 @@ class Base(DeclarativeBase, BaseModelMixin): pass
 
 async def init_db(recreate: bool):
     logger = getLogger(__name__)
+    # Ensure model modules are imported so Base.metadata has all tables.
+    import src.database.models  # noqa: F401
+
     async with engine.begin() as conn:
         if recreate:
             logger.warning("Recreating entire database schema...")

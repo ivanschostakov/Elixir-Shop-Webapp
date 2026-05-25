@@ -5,6 +5,7 @@ import time
 
 from src.webapp.main import run_app
 from src.logger import setup_logging
+from src.database import init_db
 from src.moysklad.main import MoySkladEnterprise
 from src.moysklad.order_client import get_moysklad_order_client
 from src.admin_panel.bot.main import run_admin_bot
@@ -56,6 +57,9 @@ async def _heartbeat(stop_event: asyncio.Event, task_map: dict[str, asyncio.Task
 async def main():
     stop_event = asyncio.Event()
     moysklad = MoySkladEnterprise()
+    logger.info("Ensuring database schema exists...")
+    await init_db(recreate=False)
+
     task_map: dict[str, asyncio.Task] = {
         "moysklad.postgres_worker": asyncio.create_task(
             _run_forever("moysklad.postgres_worker", moysklad.postgres_worker)

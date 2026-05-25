@@ -18,6 +18,12 @@ def env_int(name: str, default: int | None = None) -> int | None:
     try: return int(v)
     except ValueError: return default
 
+def env_float(name: str, default: float | None = None) -> float | None:
+    v = env(name)
+    if v is None or v == "": return default
+    try: return float(v)
+    except ValueError: return default
+
 def env_bool(name: str, default: bool = False) -> bool:
     v = env(name)
     if v is None or v == "": return default
@@ -135,8 +141,8 @@ CDEK_SENDER_PHONE = "+79610387977"
 CDEK_SENDER_EMAIL = "shop@example.com"
 
 YANDEX_MAP_TOKEN                  = env("YANDEX_MAP_TOKEN", "")
-YANDEX_WAREHOUSE_LON              = float(env("YANDEX_WAREHOUSE_LON", "54.731721"))
-YANDEX_WAREHOUSE_LAT              = float(env("YANDEX_WAREHOUSE_LAT", "55.974349"))
+YANDEX_WAREHOUSE_LON              = env_float("YANDEX_WAREHOUSE_LON", 54.731721)
+YANDEX_WAREHOUSE_LAT              = env_float("YANDEX_WAREHOUSE_LAT", 55.974349)
 YANDEX_GEOCODER_TOKEN             = env("YANDEX_GEOCODER_TOKEN", "")
 GEOSUGGEST_API_URL                = env("GEOSUGGEST_API_URL", "")
 GEOSUGGEST_API_KEY                = env("GEOSUGGEST_API_KEY", "")
