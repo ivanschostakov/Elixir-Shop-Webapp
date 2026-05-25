@@ -33,6 +33,7 @@ from src.database.crud import (
 from src.database.schemas import CartCreate, CartItemCreate, CartUpdate, PromoCodeUpdate, UserCreate, UserUpdate
 from src.helpers import format_order_for_amocrm, normalize_address_for_cf
 from src.services.intellectmoney import IntellectMoneyError, intellectmoney
+from src.services.geo import enrich_delivery_address_payload
 from src.services.order_fulfillment import resolve_delivery_sum
 from src.moysklad.order_sync import (
     MOY_SKLAD_INVOICEOUT_STATE_PAID,
@@ -480,6 +481,9 @@ async def _resume_incomplete_order(
 ) -> dict[str, object]:
     selected_delivery_service = cart.selected_delivery_service or payload.selected_delivery_service
     resumed_selected_delivery = deepcopy(cart.selected_delivery_payload or selected_delivery or {})
+    resumed_address_payload = resumed_selected_delivery.get("address")
+    if isinstance(resumed_address_payload, dict):
+        await enrich_delivery_address_payload(resumed_address_payload)
     resumed_delivery_sum = _to_decimal(cart.delivery_sum)
     resumed_selected_delivery["delivery_sum"] = float(resumed_delivery_sum)
     resumed_total = _to_decimal(cart.sum)
@@ -575,6 +579,9 @@ async def _prepare_order(payload: CheckoutData, db: AsyncSession) -> dict[str, o
         raise HTTPException(status_code=400, detail="Cart is empty")
 
     selected_delivery = deepcopy(payload.selected_delivery or {})
+    selected_address_payload = selected_delivery.get("address")
+    if isinstance(selected_address_payload, dict):
+        await enrich_delivery_address_payload(selected_address_payload)
     delivery_sum = resolve_delivery_sum(payload.selected_delivery_service, selected_delivery).quantize(Q2, rounding=ROUND_HALF_UP)
     selected_delivery["delivery_sum"] = float(delivery_sum)
 
