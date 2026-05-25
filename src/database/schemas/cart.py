@@ -43,6 +43,8 @@ class CartCreate(BaseModel):
     payment_paid_at: datetime | None = None
     payment_error: str | None = None
     amocrm_lead_id: int | None = None
+    moysklad_customerorder_id: str | None = None
+    moysklad_invoiceout_id: str | None = None
     order_fingerprint: str | None = None
     selected_delivery_service: str | None = None
     selected_delivery_payload: dict[str, Any] | None = None
@@ -85,6 +87,8 @@ class CartUpdate(BaseModel):
     payment_paid_at: datetime | None = None
     payment_error: str | None = None
     amocrm_lead_id: int | None = None
+    moysklad_customerorder_id: str | None = None
+    moysklad_invoiceout_id: str | None = None
     order_fingerprint: str | None = None
     selected_delivery_service: str | None = None
     selected_delivery_payload: dict[str, Any] | None = None
@@ -128,6 +132,8 @@ class CartRead(BaseModel):
     payment_paid_at: datetime | None = None
     payment_error: str | None = None
     amocrm_lead_id: int | None = None
+    moysklad_customerorder_id: str | None = None
+    moysklad_invoiceout_id: str | None = None
     order_fingerprint: str | None = None
     selected_delivery_service: str | None = None
     selected_delivery_payload: dict[str, Any] | None = None

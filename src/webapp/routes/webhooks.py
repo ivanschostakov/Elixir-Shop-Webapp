@@ -20,6 +20,12 @@ from src.database.schemas import CartUpdate, PromoCodeUpdate, UserUpdate
 from src.services.intellectmoney import intellectmoney
 from src.services.order_fulfillment import create_delivery_from_snapshot
 from src.internal_api.services.orders import verify_order_code_service
+from src.moysklad.order_sync import (
+    MOY_SKLAD_INVOICEOUT_STATE_PAID,
+    MOY_SKLAD_STATE_INVOICE_PAID,
+    sync_moysklad_customerorder_state,
+    sync_moysklad_invoiceout_state,
+)
 from src.webapp.schemas import VerifyOrderIn, VerifyOrderOut
 from src.webapp.routes.payments import reconcile_sbp_payment
 
@@ -151,6 +157,8 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             await _reverse_used_code_premium_if_needed(db, cart, order_code)
         if status_id in amocrm.PAID_STATUS_IDS:
             cart = await _create_delivery_if_needed(db, cart)
+            await sync_moysklad_customerorder_state(cart, state_name=MOY_SKLAD_STATE_INVOICE_PAID)
+            await sync_moysklad_invoiceout_state(cart, state_name=MOY_SKLAD_INVOICEOUT_STATE_PAID)
         if not cart.is_active and not cart.promo_gains_given:
             print(cart.to_dict())
             code = cart.promo_code

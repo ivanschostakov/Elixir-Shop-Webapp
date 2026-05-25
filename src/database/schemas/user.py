@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     tg_phone: str | None = Field(None, description="Telegram phone number of the user (if provided by Telegram)")
     photo_url: str | None = Field(None, description="User photo URL")
     contact_id: int | None = Field(None, description="amoCRM contact ID")
+    moysklad_counterparty_id: str | None = Field(None, description="MoySklad counterparty ID")
     conversation_id: str | None = Field(None, description="Associated OpenAI conversation ID")
     premium_requests: float = Field(0, ge=0, description="How many premium model requests the user has")
     premium_until: datetime | None = Field(None, description="Updated premium until")
@@ -34,6 +35,7 @@ class UserUpdate(BaseModel):
     tg_phone: str | None = None
     photo_url: str | None = None
     contact_id: int | None = None
+    moysklad_counterparty_id: str | None = None
     conversation_id: str | None = None
     premium_requests: float | None = Field(None, description="Updated premium requests counter")
     premium_until: datetime | None = Field(None, description="Updated premium until")

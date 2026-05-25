@@ -6,6 +6,7 @@ import time
 from src.webapp.main import run_app
 from src.logger import setup_logging
 from src.moysklad.main import MoySkladEnterprise
+from src.moysklad.order_client import get_moysklad_order_client
 from src.admin_panel.bot.main import run_admin_bot
 from src.services.yandex import promo_codes_worker
 from src.services.cdek import client as cdek_client
@@ -76,6 +77,8 @@ async def main():
         await asyncio.gather(*tasks, return_exceptions=True)
         try: await moysklad.close()
         except Exception: logger.exception("Failed to close MoySklad client cleanly")
+        try: await get_moysklad_order_client().aclose()
+        except Exception: logger.exception("Failed to close MoySklad order client cleanly")
         logger.info("All background tasks stopped cleanly.")
 
     loop = asyncio.get_running_loop()

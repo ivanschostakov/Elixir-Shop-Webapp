@@ -27,6 +27,7 @@ class InternalUserRead(BaseModel):
     tg_phone: str | None = None
     photo_url: str | None = None
     contact_id: int | None = None
+    moysklad_counterparty_id: str | None = None
     premium_requests: float = 0
     premium_until: datetime | None = None
     conversation_id: str | None = None
@@ -116,6 +117,8 @@ class InternalCartRead(BaseModel):
     payment_invoice_id: str | None = None
     payment_paid_at: datetime | None = None
     amocrm_lead_id: int | None = None
+    moysklad_customerorder_id: str | None = None
+    moysklad_invoiceout_id: str | None = None
     delivery_created_at: datetime | None = None
     delivery_provider_ref: str | None = None
     is_active: bool

@@ -34,6 +34,14 @@ from src.database.schemas import CartCreate, CartItemCreate, CartUpdate, PromoCo
 from src.helpers import format_order_for_amocrm, normalize_address_for_cf
 from src.services.intellectmoney import IntellectMoneyError, intellectmoney
 from src.services.order_fulfillment import resolve_delivery_sum
+from src.moysklad.order_sync import (
+    MOY_SKLAD_INVOICEOUT_STATE_PAID,
+    MOY_SKLAD_STATE_INVOICE_PAID,
+    MOY_SKLAD_STATE_INVOICE_SENT,
+    sync_cart_to_moysklad_safe,
+    sync_moysklad_customerorder_state,
+    sync_moysklad_invoiceout_state,
+)
 from src.tg_methods import normalize_phone
 from src.webapp.routes.cart import cart_json
 from src.webapp.schemas import CheckoutData
@@ -708,7 +716,11 @@ async def reconcile_sbp_payment(
         if error_text:
             patch["payment_error"] = error_text
 
-    return await update_cart(db, cart.id, CartUpdate(**patch))
+    updated_cart = await update_cart(db, cart.id, CartUpdate(**patch))
+    if payment_status == "paid":
+        await sync_moysklad_customerorder_state(updated_cart, state_name=MOY_SKLAD_STATE_INVOICE_PAID)
+        await sync_moysklad_invoiceout_state(updated_cart, state_name=MOY_SKLAD_INVOICEOUT_STATE_PAID)
+    return updated_cart
 
 
 def _status_payload(cart, *, payment_step: str | None = None, qr_url: str | None = None, qr_image: str | None = None) -> dict[str, object]:
@@ -730,8 +742,10 @@ def _status_payload(cart, *, payment_step: str | None = None, qr_url: str | None
 async def create_payment(payload: CheckoutData, request: Request, db: AsyncSession = Depends(get_db)):
     prepared = await _prepare_order(payload, db)
     cart = prepared["cart"]
+    user = prepared["user"]
     total_with_delivery = prepared["total_with_delivery"]
     contact_info = prepared["contact_info"]
+    await sync_cart_to_moysklad_safe(db, cart=cart, user=user)
 
     payment_method = (payload.payment_method or "later").strip().lower()
     if payment_method == "later":
@@ -825,6 +839,7 @@ async def create_payment(payload: CheckoutData, request: Request, db: AsyncSessi
             )
         else:
             cart = await update_cart(db, cart.id, CartUpdate(payment_status=_payment_status_from_step(payment_step)))
+            await sync_moysklad_customerorder_state(cart, state_name=MOY_SKLAD_STATE_INVOICE_SENT)
 
         response = _status_payload(cart, payment_step=payment_step, qr_url=qr_url, qr_image=qr_image)
         response["expires_at"] = expire_at.replace(microsecond=0).isoformat()
@@ -868,6 +883,7 @@ async def get_payment_status(order_id: int, db: AsyncSession = Depends(get_db)):
                 )
                 if payment_step in PENDING_PAYMENT_STEPS:
                     cart = await update_cart(db, cart.id, CartUpdate(payment_status=_payment_status_from_step(payment_step)))
+                    await sync_moysklad_customerorder_state(cart, state_name=MOY_SKLAD_STATE_INVOICE_SENT)
         except IntellectMoneyError as exc:
             log.warning("IntellectMoney status check failed for order %s: %s", order_id, exc)
 

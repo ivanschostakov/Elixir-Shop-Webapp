@@ -16,6 +16,7 @@ class User(Base):
     tg_phone: Mapped[str | None] = mapped_column(String, nullable=True, index=True, default=None)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     contact_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None, index=True)
+    moysklad_counterparty_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None, index=True)
     premium_requests: Mapped[float] = mapped_column(Double, nullable=False, default=0)
     premium_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     conversation_id: Mapped[str | None] = mapped_column(

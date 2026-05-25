@@ -18,6 +18,11 @@ def env_int(name: str, default: int | None = None) -> int | None:
     try: return int(v)
     except ValueError: return default
 
+def env_bool(name: str, default: bool = False) -> bool:
+    v = env(name)
+    if v is None or v == "": return default
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
 def env_list_ints(name: str) -> list[int]:
     raw = env(name, "")
     if not raw: return []
@@ -109,6 +114,11 @@ MOY_SKLAD_TOKEN = env("MOY_SKLAD_TOKEN", "")
 MOY_SKLAD_TIMEOUT_SECONDS = env_int("MOY_SKLAD_TIMEOUT_SECONDS", 30) or 30
 MOY_SKLAD_STOCK_RESERVE = env_int("MOY_SKLAD_STOCK_RESERVE", 3) or 3
 MOY_SKLAD_SYNC_INTERVAL_SECONDS = env_int("MOY_SKLAD_SYNC_INTERVAL_SECONDS", 900) or 900
+MOY_SKLAD_ORDER_SYNC_ENABLED = env_bool("MOY_SKLAD_ORDER_SYNC_ENABLED", False)
+MOY_SKLAD_ORGANIZATION_ID = env("MOY_SKLAD_ORGANIZATION_ID", "")
+MOY_SKLAD_SALES_CHANNEL_HREF = env("MOY_SKLAD_SALES_CHANNEL_HREF", "")
+MOY_SKLAD_COUNTERPARTY_EXTERNAL_CODE_PREFIX = env("MOY_SKLAD_COUNTERPARTY_EXTERNAL_CODE_PREFIX", "app_user") or "app_user"
+MOY_SKLAD_CUSTOMERORDER_EXTERNAL_CODE_PREFIX = env("MOY_SKLAD_CUSTOMERORDER_EXTERNAL_CODE_PREFIX", "app_order") or "app_order"
 
 CDEK_ACCOUNT         = env("CDEK_ACCOUNT", "")
 CDEK_API_URL         = env("CDEK_API_URL", "")

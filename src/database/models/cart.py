@@ -38,6 +38,8 @@ class Cart(Base):
     payment_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     payment_error: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     amocrm_lead_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None, index=True)
+    moysklad_customerorder_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None, index=True)
+    moysklad_invoiceout_id: Mapped[str | None] = mapped_column(String(36), nullable=True, default=None, index=True)
     order_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     selected_delivery_service: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     selected_delivery_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
