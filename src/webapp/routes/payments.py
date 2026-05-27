@@ -431,44 +431,17 @@ async def _finalize_prepared_order(
 
     if not cart.amocrm_lead_id:
         try:
+            lead_id: int | None = None
             existing_lead = await amocrm.find_lead_by_order_number(cart.id)
             if existing_lead:
                 lead_id = int(existing_lead["id"])
                 log.warning("Reattached existing amoCRM lead %s to cart %s during retry", lead_id, cart.id)
             else:
-                tariff = (
-                    selected_delivery.get("deliveryMode")
-                    or (selected_delivery.get("tariff") or {}).get("tariff_name")
-                    or (selected_delivery.get("tariff") or {}).get("tariff_code")
-                )
-                note_text = format_order_for_amocrm(
-                    cart.id,
-                    snapshot,
-                    selected_delivery_service,
-                    tariff,
-                    commentary_text,
-                    promo_code or "Не указан",
-                    delivery_sum,
-                )
-                lead = await amocrm.create_lead_with_contact_and_note(
-                    lead_name=lead_name,
-                    price=int(total_with_delivery.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
-                    address_str=address_str,
-                    phone=normalized_phone,
-                    email=contact_info["email"],
-                    order_number=str(cart.id),
-                    delivery_service=selected_delivery_service,
-                    note_text=note_text,
-                    payment_method=_amocrm_payment_label(payload.payment_method),
-                    tg_nick=payload.tg_nick,
-                    status_id=amocrm.STATUS_IDS["main"],
-                    delivery_sum=delivery_sum,
-                    promo_code=promo_code,
-                    contact_id=contact_id,
-                )
-                lead_id = int(lead["id"])
-                log.info("Created amoCRM lead %s for cart %s", lead_id, cart.id)
-            cart = await update_cart(db, cart.id, CartUpdate(amocrm_lead_id=lead_id))
+                # Temporarily disabled: new amoCRM leads are not created from this flow.
+                # lead = await amocrm.create_lead_with_contact_and_note(...)
+                log.info("Skipping amoCRM lead creation for cart %s (temporarily disabled)", cart.id)
+            if lead_id is not None:
+                cart = await update_cart(db, cart.id, CartUpdate(amocrm_lead_id=lead_id))
         except AmoCRMRecoverableError:
             log.warning(
                 "AmoCRM lead sync temporarily unavailable for cart=%s, proceeding without CRM lead binding",
