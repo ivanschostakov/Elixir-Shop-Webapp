@@ -73,7 +73,8 @@ class AsyncAmoCRM:
         auth_url = f"https://www.amocrm.ru/oauth?client_id={self.client_id}&redirect_uri={self.redirect_uri}&response_type=code"
         self.logger.warning("🔁 Launching Playwright to get new AUTH_CODE...")
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
+            headless = os.getenv("AMOCRM_PLAYWRIGHT_HEADLESS", "true").strip().lower() in {"1", "true", "yes", "on"}
+            browser = await p.chromium.launch(headless=headless)
             page = await browser.new_page()
             await page.goto(auth_url)
 
@@ -164,13 +165,18 @@ class AsyncAmoCRM:
         async with httpx.AsyncClient(timeout=30) as client:
             res = await client.request(method, url, headers=headers, **kwargs)
             if res.status_code in [401, 403]:
-                self.logger.warning("Access token invalid, refreshing...")
+                self.logger.warning("Access token rejected (%s), refreshing and retrying once...", res.status_code)
+                previous_token = self.access_token
                 async with self._refresh_lock:
-                    # Another coroutine may refresh first; skip duplicate refresh if token already valid.
-                    if not self.access_token or datetime.now(UTC) >= self.expires_at:
+                    # Another coroutine may refresh first; avoid duplicate refresh when token already changed.
+                    if self.access_token == previous_token:
                         await self._refresh()
                 headers["Authorization"] = f"Bearer {self.access_token}"
                 res = await client.request(method, url, headers=headers, **kwargs)
+                if res.status_code in [401, 403]:
+                    raise AmoCRMRecoverableError(
+                        f"AmoCRM authorization failed after refresh on {method} {endpoint}: {res.status_code}"
+                    )
 
             if res.status_code == 429:
                 raise AmoCRMRecoverableError(f"AmoCRM rate limit on {method} {endpoint}")

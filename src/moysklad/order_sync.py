@@ -238,11 +238,16 @@ async def _build_customerorder_positions(
     return positions, missing_feature_ids
 
 
+def _normalized_cart_commentary(cart: Cart) -> str | None:
+    comment = optional_str(getattr(cart, "commentary", None))
+    if comment and comment.lower() == "не указан":
+        return None
+    return comment
+
+
 def _build_order_description(cart: Cart) -> str:
-    comment = optional_str(cart.commentary)
-    if comment:
-        return f"{cart.id}. {comment}"
-    return str(cart.id)
+    telegram_number = optional_str(getattr(cart, "user_id", None)) or str(cart.id)
+    return f"Заказ #{telegram_number} Телеграм"
 
 
 def _delivery_cost_value(cart: Cart) -> str:
@@ -447,7 +452,9 @@ async def _shipment_address_full(cart: Cart, *, moysklad_client: MoySkladOrderCl
     result: dict[str, Any] = {}
     city = optional_str(address.get("city"))
     postal = optional_str(address.get("postal_code"))
-    details = optional_str(address.get("details"))
+    details = optional_str(address.get("details")) or _normalized_cart_commentary(cart)
+    if details and details.lower() == "не указан":
+        details = None
     street = optional_str(address.get("street")) or _extract_street(full)
     house = optional_str(address.get("house")) or _extract_house(full, street=street)
     apartment = optional_str(address.get("apartment")) or _extract_apartment(full)

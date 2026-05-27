@@ -7,7 +7,14 @@ from uuid import UUID
 
 import httpx
 
-from config import MOY_SKLAD_BASE_URL, MOY_SKLAD_TIMEOUT_SECONDS, MOY_SKLAD_TOKEN, UFA_TZ
+from config import (
+    MOY_SKLAD_BASE_URL,
+    MOY_SKLAD_ORDER_POSITION_VAT,
+    MOY_SKLAD_ORDER_POSITION_VAT_ENABLED,
+    MOY_SKLAD_TIMEOUT_SECONDS,
+    MOY_SKLAD_TOKEN,
+    UFA_TZ,
+)
 
 logger = logging.getLogger(__name__)
 MOY_SKLAD_API_BASE_URL = (str(MOY_SKLAD_BASE_URL or "").strip() or "https://api.moysklad.ru/api/remap/1.2").rstrip("/")
@@ -540,6 +547,14 @@ class MoySkladOrderClient:
             "quantity": int(quantity),
             "price": self._money_to_minor(unit_price),
         }
+        if MOY_SKLAD_ORDER_POSITION_VAT_ENABLED:
+            try:
+                vat_raw = Decimal(str(MOY_SKLAD_ORDER_POSITION_VAT if MOY_SKLAD_ORDER_POSITION_VAT is not None else 3))
+            except Exception:
+                vat_raw = Decimal("3")
+            normalized_vat = max(Decimal("0.00"), min(Decimal("100.00"), vat_raw.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)))
+            position["vatEnabled"] = True
+            position["vat"] = int(normalized_vat) if normalized_vat == normalized_vat.to_integral() else float(normalized_vat)
         if discount is not None:
             normalized_discount = max(Decimal("0.00"), min(Decimal("100.00"), Decimal(discount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)))
             if normalized_discount > Decimal("0.00"):
@@ -567,7 +582,7 @@ class MoySkladOrderClient:
         if counterparty_data is None:
             counterparty_data = await self._find_counterparty(normalized_external_code)
 
-        payload: dict[str, Any] = {"name": name, "externalCode": normalized_external_code}
+        payload: dict[str, Any] = {"name": name, "externalCode": normalized_external_code, "companyType": "individual"}
         normalized_email = normalize_email(email)
         normalized_phone = normalize_phone(phone)
         normalized_address = optional_str(actual_address)

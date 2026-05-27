@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import WEBAPP_BASE_DOMAIN
-from src.amocrm.client import amocrm
+from src.amocrm.client import AmoCRMRecoverableError, amocrm
 from src.database import get_db
 from src.database.crud import (
     add_or_increment_item,
@@ -350,6 +350,13 @@ def _build_checkout_snapshot(
     return snapshot
 
 
+def _normalize_commentary_text(value: str | None) -> str:
+    normalized = (value or "").strip()
+    if normalized.lower() == "не указан":
+        return ""
+    return normalized
+
+
 def _cart_item_quantities(cart) -> dict[tuple[str, str], int]:
     quantities: dict[tuple[str, str], int] = {}
     for item in getattr(cart, "items", []) or []:
@@ -401,55 +408,73 @@ async def _finalize_prepared_order(
     snapshot: dict,
 ) -> dict[str, object]:
     lead_name = _full_name(contact_info) or f"Заказ #{cart.id}"
-    contact = await amocrm.find_or_create_contact(
-        lead_name=lead_name,
-        phone=normalized_phone,
-        email=contact_info["email"],
-        contact_id=user.contact_id,
-    )
-    contact_id = contact.get("id") if isinstance(contact, dict) else None
-    if contact_id and contact_id != user.contact_id:
-        user = await update_user(db, user.tg_id, UserUpdate(contact_id=contact_id))
+    contact: dict[str, object] = {}
+    contact_id = user.contact_id
+    try:
+        contact = await amocrm.find_or_create_contact(
+            lead_name=lead_name,
+            phone=normalized_phone,
+            email=contact_info["email"],
+            contact_id=user.contact_id,
+        )
+        resolved_contact_id = contact.get("id") if isinstance(contact, dict) else None
+        if resolved_contact_id:
+            contact_id = int(resolved_contact_id)
+            if contact_id != user.contact_id:
+                user = await update_user(db, user.tg_id, UserUpdate(contact_id=contact_id))
+    except AmoCRMRecoverableError:
+        log.warning(
+            "AmoCRM contact sync temporarily unavailable for cart=%s, proceeding without CRM contact update",
+            cart.id,
+            exc_info=True,
+        )
 
     if not cart.amocrm_lead_id:
-        existing_lead = await amocrm.find_lead_by_order_number(cart.id)
-        if existing_lead:
-            lead_id = int(existing_lead["id"])
-            log.warning("Reattached existing amoCRM lead %s to cart %s during retry", lead_id, cart.id)
-        else:
-            tariff = (
-                selected_delivery.get("deliveryMode")
-                or (selected_delivery.get("tariff") or {}).get("tariff_name")
-                or (selected_delivery.get("tariff") or {}).get("tariff_code")
-            )
-            note_text = format_order_for_amocrm(
+        try:
+            existing_lead = await amocrm.find_lead_by_order_number(cart.id)
+            if existing_lead:
+                lead_id = int(existing_lead["id"])
+                log.warning("Reattached existing amoCRM lead %s to cart %s during retry", lead_id, cart.id)
+            else:
+                tariff = (
+                    selected_delivery.get("deliveryMode")
+                    or (selected_delivery.get("tariff") or {}).get("tariff_name")
+                    or (selected_delivery.get("tariff") or {}).get("tariff_code")
+                )
+                note_text = format_order_for_amocrm(
+                    cart.id,
+                    snapshot,
+                    selected_delivery_service,
+                    tariff,
+                    commentary_text,
+                    promo_code or "Не указан",
+                    delivery_sum,
+                )
+                lead = await amocrm.create_lead_with_contact_and_note(
+                    lead_name=lead_name,
+                    price=int(total_with_delivery.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+                    address_str=address_str,
+                    phone=normalized_phone,
+                    email=contact_info["email"],
+                    order_number=str(cart.id),
+                    delivery_service=selected_delivery_service,
+                    note_text=note_text,
+                    payment_method=_amocrm_payment_label(payload.payment_method),
+                    tg_nick=payload.tg_nick,
+                    status_id=amocrm.STATUS_IDS["main"],
+                    delivery_sum=delivery_sum,
+                    promo_code=promo_code,
+                    contact_id=contact_id,
+                )
+                lead_id = int(lead["id"])
+                log.info("Created amoCRM lead %s for cart %s", lead_id, cart.id)
+            cart = await update_cart(db, cart.id, CartUpdate(amocrm_lead_id=lead_id))
+        except AmoCRMRecoverableError:
+            log.warning(
+                "AmoCRM lead sync temporarily unavailable for cart=%s, proceeding without CRM lead binding",
                 cart.id,
-                snapshot,
-                selected_delivery_service,
-                tariff,
-                commentary_text,
-                promo_code or "Не указан",
-                delivery_sum,
+                exc_info=True,
             )
-            lead = await amocrm.create_lead_with_contact_and_note(
-                lead_name=lead_name,
-                price=int(total_with_delivery.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
-                address_str=address_str,
-                phone=normalized_phone,
-                email=contact_info["email"],
-                order_number=str(cart.id),
-                delivery_service=selected_delivery_service,
-                note_text=note_text,
-                payment_method=_amocrm_payment_label(payload.payment_method),
-                tg_nick=payload.tg_nick,
-                status_id=amocrm.STATUS_IDS["main"],
-                delivery_sum=delivery_sum,
-                promo_code=promo_code,
-                contact_id=contact_id,
-            )
-            lead_id = int(lead["id"])
-            log.info("Created amoCRM lead %s for cart %s", lead_id, cart.id)
-        cart = await update_cart(db, cart.id, CartUpdate(amocrm_lead_id=lead_id))
 
     return {
         "cart": cart,
@@ -488,7 +513,7 @@ async def _resume_incomplete_order(
     resumed_selected_delivery["delivery_sum"] = float(resumed_delivery_sum)
     resumed_total = _to_decimal(cart.sum)
     resumed_promo_code = cart.promo_code
-    resumed_commentary_text = (cart.commentary or commentary_text or "Не указан").strip() or "Не указан"
+    resumed_commentary_text = _normalize_commentary_text(commentary_text) or _normalize_commentary_text(cart.commentary)
     resumed_address_str = normalize_address_for_cf(resumed_selected_delivery.get("address")) or address_str
     resumed_snapshot = deepcopy(
         cart.checkout_snapshot
@@ -588,7 +613,7 @@ async def _prepare_order(payload: CheckoutData, db: AsyncSession) -> dict[str, o
     contact_info = payload.contact_info.model_dump()
     normalized_phone = normalize_phone(contact_info["phone"]) or contact_info["phone"]
     contact_info["phone"] = normalized_phone
-    commentary_text = (payload.commentary or "").strip() or "Не указан"
+    commentary_text = _normalize_commentary_text(payload.commentary)
     address_str = normalize_address_for_cf(selected_delivery.get("address")) or "Не указан"
 
     user = await upsert_user(db, UserCreate(tg_id=payload.user_id))
