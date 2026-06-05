@@ -11,7 +11,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from email.message import EmailMessage
 from typing import Literal, Union, Any
 from datetime import datetime, timedelta, UTC, timezone
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
 from playwright.async_api import async_playwright
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -29,6 +29,11 @@ class AmoCRMRecoverableError(RuntimeError):
     """Temporary AmoCRM auth/connectivity issue safe to retry later."""
 
 class AsyncAmoCRM:
+    _playwright = None
+    _auth_context = None
+    _auth_page = None
+    _auth_session_lock = None
+
     def __init__(self,base_domain: str, client_id: str, client_secret: str, redirect_uri: str, access_token: str | None = None, refresh_token: str | None = None):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.base_domain = base_domain
@@ -39,6 +44,7 @@ class AsyncAmoCRM:
         self.refresh_token = refresh_token
         self.expires_at = datetime.now(UTC) + timedelta(days=1)
         self._refresh_lock = asyncio.Lock()
+        self._auth_code_lock = asyncio.Lock()
 
         self.PIPELINE_ID = 9280278
         self.STATUS_IDS = {"main": 81419122, "check_paid": 75784946, "packaged": 75784942, "package_sent": 76566302, "package_delivered": 76566306, "won": 142}
@@ -51,15 +57,69 @@ class AsyncAmoCRM:
         x.remove(self.STATUS_IDS["main"])
         return x
 
+    @staticmethod
+    def _bool_env(name: str, default: bool = False) -> bool:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+    @staticmethod
+    def _redact_oauth_payload(payload: dict[str, str | None]) -> dict[str, str | None]:
+        redacted = dict(payload)
+        for key in ("client_secret", "code", "refresh_token"):
+            if redacted.get(key):
+                redacted[key] = "<redacted>"
+        return redacted
+
+    @classmethod
+    def _get_auth_session_lock(cls) -> asyncio.Lock:
+        if cls._auth_session_lock is None:
+            cls._auth_session_lock = asyncio.Lock()
+        return cls._auth_session_lock
+
+    async def _get_auth_page(self):
+        async with self._get_auth_session_lock():
+            if self.__class__._auth_context is None or self.__class__._auth_page is None or self.__class__._auth_page.is_closed():
+                profile_dir = WORKING_DIR / ".amocrm_playwright_profile"
+                profile_dir.mkdir(parents=True, exist_ok=True)
+                headless = self._bool_env("AMOCRM_PLAYWRIGHT_HEADLESS", True)
+                self.logger.info(
+                    "Starting persistent AmoCRM Playwright session | profile=%s | headless=%s",
+                    profile_dir,
+                    headless,
+                )
+                if self.__class__._playwright is None:
+                    self.__class__._playwright = await async_playwright().start()
+                self.__class__._auth_context = await self.__class__._playwright.chromium.launch_persistent_context(
+                    user_data_dir=str(profile_dir),
+                    headless=headless,
+                    viewport={"width": 1280, "height": 900},
+                    args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
+                )
+                pages = self.__class__._auth_context.pages
+                self.__class__._auth_page = pages[0] if pages else await self.__class__._auth_context.new_page()
+            return self.__class__._auth_page
+
     async def __request_token(self, grant_type: str, code: str | None = None):
         url = f"https://{self.base_domain}/oauth2/access_token"
         payload = {"client_id": self.client_id, "client_secret": self.client_secret, "redirect_uri": self.redirect_uri, "grant_type": grant_type}
         if grant_type == "authorization_code": payload["code"] = code
         elif grant_type == "refresh_token": payload["refresh_token"] = self.refresh_token
 
+        safe_payload = self._redact_oauth_payload(payload)
         async with httpx.AsyncClient(timeout=30) as client:
             res = await client.post(url, json=payload)
-            if res.status_code != 200: raise RuntimeError(f"Token request failed: {res.status_code} {res.text}")
+            if res.status_code != 200:
+                self.logger.error(
+                    "AmoCRM OAuth token request failed | method=POST | url=%s | json=%s | status=%s | content_type=%s | response=%s",
+                    url,
+                    safe_payload,
+                    res.status_code,
+                    res.headers.get("content-type"),
+                    res.text[:1000],
+                )
+                raise RuntimeError(f"Token request failed: {res.status_code} {res.text}; request=POST {url} json={safe_payload}")
             data = res.json()
 
         self.access_token = data["access_token"]
@@ -70,38 +130,74 @@ class AsyncAmoCRM:
         return data
 
     async def _get_new_auth_code(self) -> str:
-        auth_url = f"https://www.amocrm.ru/oauth?client_id={self.client_id}&redirect_uri={self.redirect_uri}&response_type=code"
-        self.logger.warning("🔁 Launching Playwright to get new AUTH_CODE...")
-        async with async_playwright() as p:
-            headless = os.getenv("AMOCRM_PLAYWRIGHT_HEADLESS", "true").strip().lower() in {"1", "true", "yes", "on"}
-            browser = await p.chromium.launch(headless=headless)
-            page = await browser.new_page()
-            await page.goto(auth_url)
+        query = urlencode({"client_id": self.client_id, "redirect_uri": self.redirect_uri, "response_type": "code"})
+        auth_url = f"https://www.amocrm.ru/oauth?{query}"
+        self.logger.warning("🔁 Reusing persistent Playwright session to get new AmoCRM AUTH_CODE...")
+
+        async with self._auth_code_lock:
+            page = await self._get_auth_page()
+            await page.goto(auth_url, wait_until="domcontentloaded", timeout=45000)
 
             try:
                 await page.wait_for_selector('input[name="username"]', timeout=5000)
                 await page.fill('input[name="username"]', AMOCRM_LOGIN_EMAIL)
                 await page.fill('input[name="password"]', AMOCRM_LOGIN_PASSWORD)
                 await page.click('button[type="submit"]')
-                print("🔐 Logged into AmoCRM")
-            except Exception as e: self.logger.info("Already logged in (no login form shown). " + str(e))
+                self.logger.info("Logged into AmoCRM via persistent Playwright session")
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=10000)
+                except Exception:
+                    pass
+            except Exception as e:
+                self.logger.info("AmoCRM login form not shown; using saved browser session. %s", e)
 
-            try: await page.wait_for_selector("select.js-accounts-list", timeout=40000)
-            except Exception as e: print(await page.content(), e)
+            account_id = os.getenv("AMOCRM_ACCOUNT_ID", "19843447")
+            try:
+                await page.wait_for_selector("select.js-accounts-list", timeout=10000)
+                await page.select_option("select.js-accounts-list", value=account_id)
+                self.logger.info("Selected AmoCRM account %s", account_id)
+            except Exception as e:
+                self.logger.info("AmoCRM account selector not shown or already selected. %s", e)
 
-            await page.select_option("select.js-accounts-list", value="19843447")
-            await page.click("button.js-accept")
-            print("✅ Selected Slimpeptide and clicked Разрешить")
+            clicked = False
+            for selector in ("button.js-accept", 'button:has-text("Разрешить")', 'button:has-text("Allow")', 'button[type="submit"]'):
+                try:
+                    locator = page.locator(selector).first
+                    if await locator.count():
+                        await locator.click(timeout=5000)
+                        clicked = True
+                        self.logger.info("Clicked AmoCRM authorization button: %s", selector)
+                        break
+                except Exception as e:
+                    self.logger.debug("AmoCRM authorization button selector failed: %s | %s", selector, e)
+            if not clicked:
+                self.logger.info("No AmoCRM authorization button was visible; waiting for redirect/code anyway")
 
-            try: await page.wait_for_url("https://elixirpeptides.devsivanschostakov.org/webhooks/amocrm*", timeout=30000)
-            except Exception as e: self.logger.info(f"Already logged in (no login form shown)., {page.url, str(e)}")
+            try:
+                await page.wait_for_function(
+                    "(redirectUri) => { const href = window.location.href; return href.startsWith(redirectUri) && href.includes('code='); }",
+                    arg=self.redirect_uri,
+                    timeout=45000,
+                )
+            except Exception as e:
+                title = ""
+                try:
+                    title = await page.title()
+                except Exception:
+                    pass
+                self.logger.warning(
+                    "AmoCRM auth redirect did not expose code before timeout | url=%s | title=%s | error=%s",
+                    page.url,
+                    title,
+                    e,
+                )
 
             url = page.url
-            await browser.close()
 
         code = parse_qs(urlparse(url).query).get("code", [None])[0]
-        if not code: raise RuntimeError(f"Failed to extract AUTH_CODE from redirect URL. {url}")
-        self.logger.info("✅ Got new AUTH_CODE")
+        if not code:
+            raise RuntimeError(f"Failed to extract AUTH_CODE from redirect URL. {url}")
+        self.logger.info("✅ Got new AUTH_CODE from persistent Playwright session")
         return code
 
     def _save_tokens_to_env(self, access_token: str, refresh_token: str):
