@@ -40,6 +40,7 @@ class AsyncAmoCRM:
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
+        self.proxy_url = (os.getenv("AMOCRM_PROXY_URL") or "").strip() or None
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.expires_at = datetime.now(UTC) + timedelta(days=1)
@@ -91,11 +92,17 @@ class AsyncAmoCRM:
                 )
                 if self.__class__._playwright is None:
                     self.__class__._playwright = await async_playwright().start()
+                launch_kwargs = {
+                    "user_data_dir": str(profile_dir),
+                    "headless": headless,
+                    "viewport": {"width": 1280, "height": 900},
+                    "args": ["--no-sandbox", "--disable-dev-shm-usage"],
+                }
+                if self.proxy_url:
+                    launch_kwargs["proxy"] = {"server": self.proxy_url}
+                    self.logger.info("Using AmoCRM Playwright proxy: %s", self.proxy_url)
                 self.__class__._auth_context = await self.__class__._playwright.chromium.launch_persistent_context(
-                    user_data_dir=str(profile_dir),
-                    headless=headless,
-                    viewport={"width": 1280, "height": 900},
-                    args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-web-security", "--disable-features=IsolateOrigins,site-per-process"],
+                    **launch_kwargs,
                 )
                 pages = self.__class__._auth_context.pages
                 self.__class__._auth_page = pages[0] if pages else await self.__class__._auth_context.new_page()
@@ -108,7 +115,7 @@ class AsyncAmoCRM:
         elif grant_type == "refresh_token": payload["refresh_token"] = self.refresh_token
 
         safe_payload = self._redact_oauth_payload(payload)
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, proxy=self.proxy_url) as client:
             res = await client.post(url, json=payload)
             if res.status_code != 200:
                 self.logger.error(
@@ -258,7 +265,7 @@ class AsyncAmoCRM:
         headers["Authorization"] = f"Bearer {self.access_token}"
         url = f"https://{self.base_domain}{endpoint}"
 
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, proxy=self.proxy_url) as client:
             res = await client.request(method, url, headers=headers, **kwargs)
             if res.status_code in [401, 403]:
                 self.logger.warning("Access token rejected (%s), refreshing and retrying once...", res.status_code)
