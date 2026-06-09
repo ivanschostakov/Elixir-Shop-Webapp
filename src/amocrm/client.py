@@ -34,6 +34,20 @@ class AsyncAmoCRM:
     _auth_page = None
     _auth_session_lock = None
 
+    @staticmethod
+    def _normalize_order_code(value: str | int) -> str:
+        code = str(value or "").strip()
+        code = re.sub(r"^\s*заказ\s*", "", code, flags=re.IGNORECASE)
+        code = re.sub(r"^\s*[№#]\s*", "", code)
+        return code.strip()
+
+    @classmethod
+    def _order_lead_search(cls, value: str | int) -> tuple[str, re.Pattern[str]]:
+        code = cls._normalize_order_code(value)
+        needle = f"Заказ №{code}"
+        pattern = re.compile(rf"Заказ\s*№\s*{re.escape(code)}(?=\s|$)", re.IGNORECASE)
+        return needle, pattern
+
     def __init__(self,base_domain: str, client_id: str, client_secret: str, redirect_uri: str, access_token: str | None = None, refresh_token: str | None = None):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.base_domain = base_domain
@@ -385,9 +399,7 @@ class AsyncAmoCRM:
         return await self.create_contact(name=lead_name, phone=normalized_phone, email=normalized_email)
 
     async def find_lead_by_order_number(self, order_number: str | int) -> dict | None:
-        code_str = str(order_number).strip()
-        needle = f"№{code_str} "
-        rx = re.compile(rf"№{re.escape(code_str)}\s")
+        needle, rx = self._order_lead_search(order_number)
         page = 1
         limit = 50
         max_pages = 20
@@ -472,9 +484,8 @@ class AsyncAmoCRM:
         return result
 
     async def get_valid_deal_price_and_email_verification_code_for_ai(self, code: str | int) -> tuple[PriceT, str | None, str | None]:
-        code_str = str(code).strip()
-        needle = f"№{code_str} "
-        rx = re.compile(rf"№{re.escape(code_str)}\s")
+        code_str = self._normalize_order_code(code)
+        needle, rx = self._order_lead_search(code_str)
         cutoff_ts = int((datetime.now(timezone.utc) - timedelta(days=62)).timestamp())
         page = 1
         limit = 50
@@ -579,9 +590,7 @@ class AsyncAmoCRM:
         return None
 
     async def get_lead_status(self, deal_code: str | int) -> tuple[str, bool]:
-        code_str = str(deal_code).strip()
-        needle = f"№{code_str} "
-        rx = re.compile(rf"№{re.escape(code_str)}\s")
+        needle, rx = self._order_lead_search(deal_code)
         page = 1
         limit = 50
         max_pages = 20
