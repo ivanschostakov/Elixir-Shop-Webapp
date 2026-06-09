@@ -555,6 +555,10 @@ class AsyncAmoCRM:
     @staticmethod
     def _generate_6_digit_code() -> str: return f"{secrets.randbelow(1_000_000):06d}"
 
+    @staticmethod
+    def _looks_like_email(value: str | None) -> bool:
+        return bool(value and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value.strip()))
+
     async def _send_verification_code_email(self, to_email: str, code: str, deal_code: str) -> None:
         from_email = SMTP_USER
         from_name = getattr(self, "GMAIL_FROM_NAME", "ElixirPeptide")
@@ -656,7 +660,7 @@ class AsyncAmoCRM:
                 if not isinstance(values, list): continue
                 for v in values:
                     val = (v or {}).get("value")
-                    if isinstance(val, str) and "@" in val: return val.strip()
+                    if isinstance(val, str) and AsyncAmoCRM._looks_like_email(val): return val.strip()
 
         return None
 
