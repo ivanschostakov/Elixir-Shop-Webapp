@@ -58,6 +58,6 @@ async def spa_product(request: Request):
 
 async def run_app():
     logger.info("Starting uvicorn server (reload=%s)", False)
-    server = Server(Config(app, reload=False, log_config=None))
+    server = Server(Config(app, reload=False, log_config=None, port=8002))
     await server.serve()
     logger.warning("uvicorn server stopped")

@@ -12,11 +12,10 @@ from email.message import EmailMessage
 from typing import Literal, Union, Any
 from datetime import datetime, timedelta, UTC, timezone
 from urllib.parse import urlparse, parse_qs, urlencode
-from playwright.async_api import async_playwright
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from config import AMOCRM_CLIENT_ID, AMOCRM_CLIENT_SECRET, AMOCRM_ACCESS_TOKEN, AMOCRM_LOGIN_EMAIL, AMOCRM_LOGIN_PASSWORD, AMOCRM_REFRESH_TOKEN, AMOCRM_REDIRECT_URI, AMOCRM_BASE_DOMAIN, WORKING_DIR, SMTP_USER, SMTP_PASSWORD, UFA_TZ
+from config import AMOCRM_CLIENT_ID, AMOCRM_CLIENT_SECRET, AMOCRM_ACCESS_TOKEN, AMOCRM_REFRESH_TOKEN, AMOCRM_REDIRECT_URI, AMOCRM_BASE_DOMAIN, WORKING_DIR, SMTP_USER, SMTP_PASSWORD, UFA_TZ
 from src.database import get_session
 from src.database.crud import get_carts_by_date
 from src.database.models import Feature
@@ -29,10 +28,6 @@ class AmoCRMRecoverableError(RuntimeError):
     """Temporary AmoCRM auth/connectivity issue safe to retry later."""
 
 class AsyncAmoCRM:
-    _playwright = None
-    _auth_context = None
-    _auth_page = None
-    _auth_session_lock = None
 
     @staticmethod
     def _normalize_order_code(value: str | int) -> str:
@@ -59,7 +54,6 @@ class AsyncAmoCRM:
         self.refresh_token = refresh_token
         self.expires_at = datetime.now(UTC) + timedelta(days=1)
         self._refresh_lock = asyncio.Lock()
-        self._auth_code_lock = asyncio.Lock()
 
         self.PIPELINE_ID = 9280278
         self.STATUS_IDS = {"main": 81419122, "check_paid": 75784946, "packaged": 75784942, "package_sent": 76566302, "package_delivered": 76566306, "won": 142}
@@ -86,41 +80,6 @@ class AsyncAmoCRM:
             if redacted.get(key):
                 redacted[key] = "<redacted>"
         return redacted
-
-    @classmethod
-    def _get_auth_session_lock(cls) -> asyncio.Lock:
-        if cls._auth_session_lock is None:
-            cls._auth_session_lock = asyncio.Lock()
-        return cls._auth_session_lock
-
-    async def _get_auth_page(self):
-        async with self._get_auth_session_lock():
-            if self.__class__._auth_context is None or self.__class__._auth_page is None or self.__class__._auth_page.is_closed():
-                profile_dir = WORKING_DIR / ".amocrm_playwright_profile"
-                profile_dir.mkdir(parents=True, exist_ok=True)
-                headless = self._bool_env("AMOCRM_PLAYWRIGHT_HEADLESS", True)
-                self.logger.info(
-                    "Starting persistent AmoCRM Playwright session | profile=%s | headless=%s",
-                    profile_dir,
-                    headless,
-                )
-                if self.__class__._playwright is None:
-                    self.__class__._playwright = await async_playwright().start()
-                launch_kwargs = {
-                    "user_data_dir": str(profile_dir),
-                    "headless": headless,
-                    "viewport": {"width": 1280, "height": 900},
-                    "args": ["--no-sandbox", "--disable-dev-shm-usage"],
-                }
-                if self.proxy_url:
-                    launch_kwargs["proxy"] = {"server": self.proxy_url}
-                    self.logger.info("Using AmoCRM Playwright proxy: %s", self.proxy_url)
-                self.__class__._auth_context = await self.__class__._playwright.chromium.launch_persistent_context(
-                    **launch_kwargs,
-                )
-                pages = self.__class__._auth_context.pages
-                self.__class__._auth_page = pages[0] if pages else await self.__class__._auth_context.new_page()
-            return self.__class__._auth_page
 
     async def __request_token(self, grant_type: str, code: str | None = None):
         url = f"https://{self.base_domain}/oauth2/access_token"
@@ -150,77 +109,6 @@ class AsyncAmoCRM:
         self.logger.info("✅ Tokens successfully updated")
         return data
 
-    async def _get_new_auth_code(self) -> str:
-        query = urlencode({"client_id": self.client_id, "redirect_uri": self.redirect_uri, "response_type": "code"})
-        auth_url = f"https://www.amocrm.ru/oauth?{query}"
-        self.logger.warning("🔁 Reusing persistent Playwright session to get new AmoCRM AUTH_CODE...")
-
-        async with self._auth_code_lock:
-            page = await self._get_auth_page()
-            await page.goto(auth_url, wait_until="domcontentloaded", timeout=45000)
-
-            try:
-                await page.wait_for_selector('input[name="username"]', timeout=5000)
-                await page.fill('input[name="username"]', AMOCRM_LOGIN_EMAIL)
-                await page.fill('input[name="password"]', AMOCRM_LOGIN_PASSWORD)
-                await page.click('button[type="submit"]')
-                self.logger.info("Logged into AmoCRM via persistent Playwright session")
-                try:
-                    await page.wait_for_load_state("networkidle", timeout=10000)
-                except Exception:
-                    pass
-            except Exception as e:
-                self.logger.info("AmoCRM login form not shown; using saved browser session. %s", e)
-
-            account_id = os.getenv("AMOCRM_ACCOUNT_ID", "19843447")
-            try:
-                await page.wait_for_selector("select.js-accounts-list", timeout=10000)
-                await page.select_option("select.js-accounts-list", value=account_id)
-                self.logger.info("Selected AmoCRM account %s", account_id)
-            except Exception as e:
-                self.logger.info("AmoCRM account selector not shown or already selected. %s", e)
-
-            clicked = False
-            for selector in ("button.js-accept", 'button:has-text("Разрешить")', 'button:has-text("Allow")', 'button[type="submit"]'):
-                try:
-                    locator = page.locator(selector).first
-                    if await locator.count():
-                        await locator.click(timeout=5000)
-                        clicked = True
-                        self.logger.info("Clicked AmoCRM authorization button: %s", selector)
-                        break
-                except Exception as e:
-                    self.logger.debug("AmoCRM authorization button selector failed: %s | %s", selector, e)
-            if not clicked:
-                self.logger.info("No AmoCRM authorization button was visible; waiting for redirect/code anyway")
-
-            try:
-                await page.wait_for_function(
-                    "(redirectUri) => { const href = window.location.href; return href.startsWith(redirectUri) && href.includes('code='); }",
-                    arg=self.redirect_uri,
-                    timeout=45000,
-                )
-            except Exception as e:
-                title = ""
-                try:
-                    title = await page.title()
-                except Exception:
-                    pass
-                self.logger.warning(
-                    "AmoCRM auth redirect did not expose code before timeout | url=%s | title=%s | error=%s",
-                    page.url,
-                    title,
-                    e,
-                )
-
-            url = page.url
-
-        code = parse_qs(urlparse(url).query).get("code", [None])[0]
-        if not code:
-            raise RuntimeError(f"Failed to extract AUTH_CODE from redirect URL. {url}")
-        self.logger.info("✅ Got new AUTH_CODE from persistent Playwright session")
-        return code
-
     def _save_tokens_to_env(self, access_token: str, refresh_token: str):
         path = WORKING_DIR / ".env"
         self.logger.info(f"Saving tokens to {path}")
@@ -247,24 +135,14 @@ class AsyncAmoCRM:
         with open(path, "w") as f: f.writelines(new_lines)
         self.logger.info("💾 Saved new tokens to .env")
 
-    async def _authorize(self, code: str | None = None):
-        if not code: code = await self._get_new_auth_code()
-        return await self.__request_token("authorization_code", code)
-
     async def _refresh(self):
+        if not self.refresh_token:
+            raise AmoCRMRecoverableError("Missing amoCRM refresh token")
         try:
             return await self.__request_token("refresh_token")
         except Exception as e:
-            allow_interactive = os.getenv("AMOCRM_ALLOW_INTERACTIVE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
             self.logger.error(f"❌ Refresh failed: {e}")
-            if not allow_interactive:
-                raise AmoCRMRecoverableError("Refresh token exchange failed and interactive re-auth is disabled") from e
-            self.logger.warning("retrying with new AUTH_CODE...")
-            try:
-                return await self._authorize()
-            except Exception as auth_exc:
-                raise AmoCRMRecoverableError("Interactive re-auth failed") from auth_exc
-
+            raise AmoCRMRecoverableError("Refresh token exchange failed") from e
     async def _ensure_token_valid(self):
         if self.access_token and datetime.now(UTC) < self.expires_at:
             return
@@ -283,11 +161,7 @@ class AsyncAmoCRM:
             res = await client.request(method, url, headers=headers, **kwargs)
             if res.status_code in [401, 403]:
                 self.logger.warning("Access token rejected (%s), refreshing and retrying once...", res.status_code)
-                previous_token = self.access_token
-                async with self._refresh_lock:
-                    # Another coroutine may refresh first; avoid duplicate refresh when token already changed.
-                    if self.access_token == previous_token:
-                        await self._refresh()
+                await self._refresh()
                 headers["Authorization"] = f"Bearer {self.access_token}"
                 res = await client.request(method, url, headers=headers, **kwargs)
                 if res.status_code in [401, 403]:
@@ -301,7 +175,6 @@ class AsyncAmoCRM:
             res.raise_for_status()
             if res.text.strip(): return res.json()
             return {}
-
     async def _get(self, endpoint: str, **kwargs): return await self._request("GET", endpoint, **kwargs)
     async def _post(self, endpoint: str, **kwargs): return await self._request("POST", endpoint, **kwargs)
     async def _patch(self, endpoint: str, **kwargs): return await self._request("PATCH", endpoint, **kwargs)
