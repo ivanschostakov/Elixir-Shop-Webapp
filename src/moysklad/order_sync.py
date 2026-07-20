@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import AMOCRM_BASE_DOMAIN, MOY_SKLAD_ORDER_SYNC_ENABLED, MOY_SKLAD_ORGANIZATION_ID, MOY_SKLAD_SALES_CHANNEL_HREF
+from config import AMOCRM_BASE_URL, MOY_SKLAD_ORDER_SYNC_ENABLED, MOY_SKLAD_ORGANIZATION_ID, MOY_SKLAD_SALES_CHANNEL_HREF
 from src.database.crud import get_cart_by_id, update_cart, update_user
 from src.database.models import Cart, Feature, User
 from src.database.schemas import CartUpdate, UserUpdate
@@ -315,10 +315,10 @@ async def _moysklad_custom_attr_refs(moysklad_client: MoySkladOrderClient, cart:
 
 def _amocrm_lead_link(cart: Cart) -> str | None:
     lead_id = optional_str(cart.amocrm_lead_id)
-    domain = optional_str(AMOCRM_BASE_DOMAIN)
-    if not lead_id or not domain:
+    base_url = optional_str(AMOCRM_BASE_URL)
+    if not lead_id or not base_url:
         return None
-    normalized_domain = domain.replace("https://", "").replace("http://", "").strip("/")
+    normalized_domain = base_url.replace("https://", "").replace("http://", "").strip("/")
     if not normalized_domain:
         return None
     return f"https://{normalized_domain}/leads/detail/{lead_id}"

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import re
@@ -10,12 +9,12 @@ from copy import deepcopy
 from decimal import Decimal, ROUND_HALF_UP
 from email.message import EmailMessage
 from typing import Literal, Union, Any
-from datetime import datetime, timedelta, UTC, timezone
+from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs, urlencode
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from config import AMOCRM_CLIENT_ID, AMOCRM_CLIENT_SECRET, AMOCRM_ACCESS_TOKEN, AMOCRM_REFRESH_TOKEN, AMOCRM_REDIRECT_URI, AMOCRM_BASE_DOMAIN, WORKING_DIR, SMTP_USER, SMTP_PASSWORD, UFA_TZ
+from config import AMOCRM_ACCESS_TOKEN, AMOCRM_BASE_URL, SMTP_USER, SMTP_PASSWORD, UFA_TZ
 from src.database import get_session
 from src.database.crud import get_carts_by_date
 from src.database.models import Feature
@@ -43,17 +42,10 @@ class AsyncAmoCRM:
         pattern = re.compile(rf"Заказ\s*№\s*{re.escape(code)}(?=\s|$)", re.IGNORECASE)
         return needle, pattern
 
-    def __init__(self,base_domain: str, client_id: str, client_secret: str, redirect_uri: str, access_token: str | None = None, refresh_token: str | None = None):
+    def __init__(self, base_url: str, access_token: str | None = None):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.base_domain = base_domain
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.redirect_uri = redirect_uri
-        self.proxy_url = (os.getenv("AMOCRM_PROXY_URL") or "").strip() or None
+        self.base_url = base_url.rstrip("/")
         self.access_token = access_token
-        self.refresh_token = refresh_token
-        self.expires_at = datetime.now(UTC) + timedelta(days=1)
-        self._refresh_lock = asyncio.Lock()
 
         self.PIPELINE_ID = 9280278
         self.STATUS_IDS = {"main": 81419122, "check_paid": 75784946, "packaged": 75784942, "package_sent": 76566302, "package_delivered": 76566306, "won": 142}
@@ -73,101 +65,19 @@ class AsyncAmoCRM:
             return default
         return raw.strip().lower() in {"1", "true", "yes", "on"}
 
-    @staticmethod
-    def _redact_oauth_payload(payload: dict[str, str | None]) -> dict[str, str | None]:
-        redacted = dict(payload)
-        for key in ("client_secret", "code", "refresh_token"):
-            if redacted.get(key):
-                redacted[key] = "<redacted>"
-        return redacted
-
-    async def __request_token(self, grant_type: str, code: str | None = None):
-        url = f"https://{self.base_domain}/oauth2/access_token"
-        payload = {"client_id": self.client_id, "client_secret": self.client_secret, "redirect_uri": self.redirect_uri, "grant_type": grant_type}
-        if grant_type == "authorization_code": payload["code"] = code
-        elif grant_type == "refresh_token": payload["refresh_token"] = self.refresh_token
-
-        safe_payload = self._redact_oauth_payload(payload)
-        async with httpx.AsyncClient(timeout=30, proxy=self.proxy_url) as client:
-            res = await client.post(url, json=payload)
-            if res.status_code != 200:
-                self.logger.error(
-                    "AmoCRM OAuth token request failed | method=POST | url=%s | json=%s | status=%s | content_type=%s | response=%s",
-                    url,
-                    safe_payload,
-                    res.status_code,
-                    res.headers.get("content-type"),
-                    res.text[:1000],
-                )
-                raise RuntimeError(f"Token request failed: {res.status_code} {res.text}; request=POST {url} json={safe_payload}")
-            data = res.json()
-
-        self.access_token = data["access_token"]
-        self.refresh_token = data["refresh_token"]
-        self.expires_at = datetime.now(UTC) + timedelta(seconds=data["expires_in"])
-        self._save_tokens_to_env(self.access_token, self.refresh_token)
-        self.logger.info("✅ Tokens successfully updated")
-        return data
-
-    def _save_tokens_to_env(self, access_token: str, refresh_token: str):
-        path = WORKING_DIR / ".env"
-        self.logger.info(f"Saving tokens to {path}")
-        lines = []
-        if os.path.exists(path):
-            with open(path, "r") as f: lines = f.readlines()
-
-        new_lines = []
-        found_a, found_r = False, False
-        for line in lines:
-            if line.startswith("AMOCRM_ACCESS_TOKEN"):
-                new_lines.append(f'AMOCRM_ACCESS_TOKEN="{access_token}"\n')
-                found_a = True
-
-            elif line.startswith("AMOCRM_REFRESH_TOKEN"):
-                new_lines.append(f'AMOCRM_REFRESH_TOKEN="{refresh_token}"\n')
-                found_r = True
-
-            else: new_lines.append(line)
-
-        if not found_a: new_lines.append(f'AMOCRM_ACCESS_TOKEN="{access_token}"\n')
-        if not found_r: new_lines.append(f'AMOCRM_REFRESH_TOKEN="{refresh_token}"\n')
-
-        with open(path, "w") as f: f.writelines(new_lines)
-        self.logger.info("💾 Saved new tokens to .env")
-
-    async def _refresh(self):
-        if not self.refresh_token:
-            raise AmoCRMRecoverableError("Missing amoCRM refresh token")
-        try:
-            return await self.__request_token("refresh_token")
-        except Exception as e:
-            self.logger.error(f"❌ Refresh failed: {e}")
-            raise AmoCRMRecoverableError("Refresh token exchange failed") from e
-    async def _ensure_token_valid(self):
-        if self.access_token and datetime.now(UTC) < self.expires_at:
-            return
-        async with self._refresh_lock:
-            if self.access_token and datetime.now(UTC) < self.expires_at:
-                return
-            await self._refresh()
-
     async def _request(self, method: str, endpoint: str, **kwargs):
-        await self._ensure_token_valid()
+        if not self.access_token:
+            raise AmoCRMRecoverableError("Missing AMOCRM_ACCESS_TOKEN")
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Bearer {self.access_token}"
-        url = f"https://{self.base_domain}{endpoint}"
+        url = f"{self.base_url}{endpoint}"
 
-        async with httpx.AsyncClient(timeout=30, proxy=self.proxy_url) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             res = await client.request(method, url, headers=headers, **kwargs)
             if res.status_code in [401, 403]:
-                self.logger.warning("Access token rejected (%s), refreshing and retrying once...", res.status_code)
-                await self._refresh()
-                headers["Authorization"] = f"Bearer {self.access_token}"
-                res = await client.request(method, url, headers=headers, **kwargs)
-                if res.status_code in [401, 403]:
-                    raise AmoCRMRecoverableError(
-                        f"AmoCRM authorization failed after refresh on {method} {endpoint}: {res.status_code}"
-                    )
+                raise AmoCRMRecoverableError(
+                    f"AmoCRM static access token rejected on {method} {endpoint}: {res.status_code}"
+                )
 
             if res.status_code == 429:
                 raise AmoCRMRecoverableError(f"AmoCRM rate limit on {method} {endpoint}")
@@ -743,7 +653,7 @@ class AsyncAmoCRM:
         order.amocrm_lead_id = lead_id
         return "created", lead_id
 
-amocrm = AsyncAmoCRM(base_domain=AMOCRM_BASE_DOMAIN, client_id=AMOCRM_CLIENT_ID, client_secret=AMOCRM_CLIENT_SECRET, redirect_uri=AMOCRM_REDIRECT_URI, access_token=AMOCRM_ACCESS_TOKEN, refresh_token=AMOCRM_REFRESH_TOKEN)
+amocrm = AsyncAmoCRM(base_url=AMOCRM_BASE_URL, access_token=AMOCRM_ACCESS_TOKEN)
 async def fix(days_back: int = 7, dry_run: bool = False):
     async with get_session() as session:
         created = 0
