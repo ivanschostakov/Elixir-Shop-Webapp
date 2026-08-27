@@ -80,6 +80,21 @@ class InternalUsedCodeRead(BaseModel):
     price: Decimal
 
 
+class InternalPremiumRedemptionCreate(BaseModel):
+    user_id: int
+    code: str = Field(min_length=1, max_length=64)
+    price: Decimal = Field(ge=5000)
+    months: int = Field(ge=1, le=120)
+
+
+class InternalPremiumRedemptionRead(BaseModel):
+    user_id: int
+    code: str
+    price: Decimal
+    premium_until: datetime
+    already_redeemed: bool = False
+
+
 class InternalPromoRead(BaseModel):
     id: int
     code: str

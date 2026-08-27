@@ -5,12 +5,19 @@ from src.database import get_db
 from src.database.schemas import UsedCodeCreate
 from src.internal_api.auth import get_internal_bot_auth_context
 from src.internal_api.errors import InternalApiRoute
-from src.internal_api.schemas import InternalProductRead, InternalPromoRead, InternalUsedCodeRead
+from src.internal_api.schemas import (
+    InternalPremiumRedemptionCreate,
+    InternalPremiumRedemptionRead,
+    InternalProductRead,
+    InternalPromoRead,
+    InternalUsedCodeRead,
+)
 from src.internal_api.services.catalog import (
     create_used_code_service,
     get_product_with_features_service,
     get_used_code_by_code_service,
     list_promos_service,
+    redeem_premium_order_service,
 )
 
 router = APIRouter(
@@ -34,6 +41,14 @@ async def get_used_code_by_code(code: str, db: AsyncSession = Depends(get_db)) -
 @router.post("/used-codes", response_model=InternalUsedCodeRead)
 async def create_used_code(payload: UsedCodeCreate, db: AsyncSession = Depends(get_db)) -> InternalUsedCodeRead:
     return await create_used_code_service(db, payload)
+
+
+@router.post("/used-codes/redeem-premium", response_model=InternalPremiumRedemptionRead)
+async def redeem_premium_order(
+    payload: InternalPremiumRedemptionCreate,
+    db: AsyncSession = Depends(get_db),
+) -> InternalPremiumRedemptionRead:
+    return await redeem_premium_order_service(db, payload)
 
 
 @router.get("/promos", response_model=list[InternalPromoRead])
