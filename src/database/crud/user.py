@@ -137,7 +137,7 @@ async def update_premium_requests(db: AsyncSession, value: int = 2) -> int:
         .execution_options(synchronize_session=False)
     )
     await db.commit()
-    print(f"Updated {result.rowcount or 0} to add requests with {value}")
+    return result.rowcount or 0
 
 async def update_user_name(i: int, first_name: str | None = None, last_name: str | None = None) -> User | None:
     from src.database import get_session

@@ -67,9 +67,8 @@ class CDEKClientV2:
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"}
         async with httpx.AsyncClient(timeout=20.0) as httpx_client: resp = await httpx_client.request(method=method.upper(), url=url, params=params, json=json, headers=headers)
         if resp.status_code >= 400:
-            body = resp.text
-            self.log.error("CDEK API error %s %s: %s", method, path, body)
-            raise HTTPException(status_code=502, detail={"service": "cdek", "status_code": resp.status_code, "path": path, "body": body})
+            self.log.error("CDEK API error %s %s status=%s", method, path, resp.status_code)
+            raise HTTPException(status_code=502, detail={"service": "cdek", "status_code": resp.status_code, "path": path})
 
         return resp.json()
 

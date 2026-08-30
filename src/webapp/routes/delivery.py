@@ -17,7 +17,6 @@ yandex_router = APIRouter(prefix="/delivery/yandex", tags=["yandex"])
 
 @cdek_router.api_route(path="", methods=["GET", "POST"])
 async def cdek_proxy(request: Request):
-    print(request)
     headers = {"Authorization": f"Bearer {cdek_client._access_token}"}
     params = request.query_params
     raw_body = await request.body()
@@ -29,7 +28,6 @@ async def cdek_proxy(request: Request):
     if action == "offices": endpoint = f"{CDEK_API_URL}/deliverypoints"
     elif action == "calculate":
         if isinstance(body, dict) and isinstance(body.get("to_location"), dict):
-            print(body.get("to_location"), body.get("from_location"))
             endpoint = f"{CDEK_API_URL}/calculator/tarifflist"
             body.update({"type": 2})
         else: return Response(status_code=400, content='{"error":"Invalid to_location"}')
@@ -47,7 +45,7 @@ async def cdek_proxy(request: Request):
             return Response(content=json.dumps(data, ensure_ascii=False), status_code=200, media_type="application/json")
         except Exception as e: logger.warning("CDEK: Error filtering tariffs: %s", e)
 
-    print(resp.content)
+    logger.debug("CDEK %s request completed with status %s", action, resp.status_code)
     return Response(content=resp.content, status_code=resp.status_code, media_type="application/json")
 
 @yandex_router.get("/reverse-geocode")
@@ -190,7 +188,6 @@ async def get_pvz_all():
 async def yandex_availability(req: AvailabilityRequest):
     if req.delivery_mode == "self_pickup":
         pid = req.destination.platform_station_id
-        print(pid, req.destination.full_address)
         if not pid: raise HTTPException(422, detail="destination.platform_station_id is required for self_pickup")
         destination_node = {
             "type": "platform_station",
@@ -261,7 +258,7 @@ async def yandex_availability(req: AvailabilityRequest):
             headers=headers,
         )
         if r.status_code >= 400:
-            print(r.text)
+            logger.warning("Yandex availability request failed with status %s", r.status_code)
             try: raise HTTPException(status_code=400, detail=r.json())
             except Exception: raise HTTPException(status_code=400, detail={"message": r.text})
 

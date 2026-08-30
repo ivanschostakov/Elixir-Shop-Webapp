@@ -87,12 +87,11 @@ async def _reverse_used_code_premium_if_needed(db: AsyncSession, cart: Cart, ord
     await delete_used_code(db, used_code.id)
 
 @router.get("/amocrm")
-async def get_webhook(request: Request):
-    try: print(await request.json())
-    except: print(await request.body())
+async def probe_amocrm_webhook():
+    return JSONResponse({"ok": True})
 
 @router.post("/amocrm")
-async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+async def process_amocrm_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     body = await request.body()
     q = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
 
@@ -147,7 +146,7 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
         order_code = str(cart.id)
         status_text = amocrm.STATUS_WORDS.get(status_id, f"Статус {status_id}")
-        print(cart_id, '->', status_text)
+        amocrm.logger.info("Applying status %s to cart %s", status_id, cart_id)
         is_active = True if status_id not in [143, 142, 82657618] else False
         is_paid = True if status_id in amocrm.PAID_STATUS_IDS else None
         is_canceled = True if status_id in [82657618, 143] else None
@@ -160,11 +159,9 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             await sync_moysklad_customerorder_state(cart, state_name=MOY_SKLAD_STATE_INVOICE_PAID)
             await sync_moysklad_invoiceout_state(cart, state_name=MOY_SKLAD_INVOICEOUT_STATE_PAID)
         if not cart.is_active and not cart.promo_gains_given:
-            print(cart.to_dict())
             code = cart.promo_code
             promo_code = await get_promo_by_code(db, code)
             if promo_code:
-                print(promo_code.code)
                 owner_pct = Decimal(promo_code.owner_pct or 0)
                 lvl1_pct = Decimal(promo_code.lvl1_pct or 0)
                 lvl2_pct = Decimal(promo_code.lvl2_pct or 0)
@@ -173,10 +170,7 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 new_lvl1_gained  = (Decimal(promo_code.lvl1_amount_gained  or 0) + (cart.sum * lvl1_pct  / D100)).quantize(Q2, rounding=ROUND_HALF_UP)
                 new_lvl2_gained  = (Decimal(promo_code.lvl2_amount_gained  or 0) + (cart.sum * lvl2_pct  / D100)).quantize(Q2, rounding=ROUND_HALF_UP)
                 promo_code = await update_promo(db, promo_code.id, PromoCodeUpdate(owner_amount_gained=new_owner_gained, lvl1_amount_gained=new_lvl1_gained, lvl2_amount_gained=new_lvl2_gained))
-                amocrm.logger.info(f"Promo code {promo_code.code} gains updated:\n"
-                                   f"{promo_code.owner_name} — {promo_code.owner_amount_gained}\n"
-                                   f"{promo_code.lvl1_name} — {promo_code.lvl1_amount_gained}\n"
-                                   f"{promo_code.lvl2_name} — {promo_code.lvl2_amount_gained}\n")
+                amocrm.logger.info("Promo gains updated for promo id=%s", promo_code.id)
             cart = await update_cart(db, cart.id, CartUpdate(promo_gains_given=True))
 
         amocrm.logger.info("Lead %s cart updated successfully", lead_id)
@@ -187,9 +181,8 @@ async def get_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         return JSONResponse({"ok": False, "ignored": "exception"}, status_code=500)
 
 @router.put("/amocrm")
-async def get_webhook(request: Request):
-    try: print(await request.json())
-    except: print(await request.body())
+async def update_amocrm_webhook():
+    return JSONResponse({"ok": True})
 
 
 @router.post("/intellectmoney")
@@ -224,9 +217,8 @@ async def intellectmoney_webhook(request: Request, db: AsyncSession = Depends(ge
     return PlainTextResponse("OK")
 
 @router.delete("/amocrm")
-async def get_webhook(request: Request):
-    try: print(await request.json())
-    except: print(await request.body())
+async def delete_amocrm_webhook():
+    return JSONResponse({"ok": True})
 
 @router.post("/verify-order", response_model=VerifyOrderOut)
 async def verify_order(payload: VerifyOrderIn, db: AsyncSession = Depends(get_db)) -> VerifyOrderOut:

@@ -84,7 +84,7 @@ class AsyncIntellectMoney:
 
     async def _post_form(self, path: str, form_data: dict[str, Any], *sign_parts: Any) -> dict[str, Any]:
         headers = self._headers(*sign_parts)
-        print("IntellectMoney request", {"path": path, "form_data": form_data})
+        self.logger.debug("Sending IntellectMoney request to %s", path)
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(f"{self.api_base}{path}", data=form_data, headers=headers)
         response.raise_for_status()
