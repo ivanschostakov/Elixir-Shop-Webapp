@@ -45,14 +45,14 @@ class UserTokenUsage(Base):
 
     USD_QUANT = Decimal("0.000001")
     TOKENS_PER_MILLION = Decimal("1000000")
-    # Official source: https://openai.com/api/pricing/
+    # Official source: https://developers.openai.com/api/docs/models
     BOT_PRICING = {
         # Legacy backfill heuristic only:
         # - used for historical rows created before exact cached token counts were stored
         # - no live pricing path should depend on this ratio once cached_input_tokens is present
         BotEnum.dose: ModelPricing("gpt-5-mini", Decimal("0.25"), Decimal("0.025"), Decimal("2.00"), Decimal("0.15"), Decimal("0.06"), Decimal("0.45")),
         BotEnum.professor: ModelPricing("gpt-5-mini", Decimal("0.25"), Decimal("0.025"), Decimal("2.00"), Decimal("0.15"), Decimal("0.06"), Decimal("0.45")),
-        BotEnum.new: ModelPricing("gpt-5.4", Decimal("2.50"), Decimal("0.25"), Decimal("15.00"), Decimal("0.25"), Decimal("0.08"), Decimal("0.65")),
+        BotEnum.new: ModelPricing("gpt-5.6-terra", Decimal("2.00"), Decimal("0.20"), Decimal("12.00"), Decimal("0.25"), Decimal("0.08"), Decimal("0.65")),
     }
 
     @classmethod
