@@ -35,3 +35,11 @@ photos/
 .vscode/
 .DS_Store
 .ipynb_checkpoints/
+
+# Local configuration templates and private runtime files
+!.env.*.example
+._*
+*.session-*
+backups/
+backup/
+*.sqlite*

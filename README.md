@@ -2,6 +2,13 @@
 
 Python web application and integration service for the Elixir Peptide commerce ecosystem. It combines the customer-facing web experience, internal bot APIs, catalog and cart persistence, fulfillment services, and operational workers.
 
+## Related Repositories
+
+- [Shop Application](https://github.com/ivanschostakov/Elixir-Shop-Application): the React Native customer application, its backend, and web administration interface.
+- [AI Bot Suite](https://github.com/ivanschostakov/Elixir-AI-Bot): Telegram AI assistants that integrate with configured shop APIs.
+
+This repository contains the web application and integration service; mobile application source is maintained separately.
+
 ## Highlights
 
 - Product catalog, search, favorites, carts, promo codes, and checkout routes.
